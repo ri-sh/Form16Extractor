@@ -1,0 +1,31 @@
+# Core dependencies for robust Form 16 extraction
+camelot-py[cv]==0.10.1    # Table extraction from PDFs
+pandas>=2.0.0             # Data manipulation and analysis
+pydantic>=2.0.0           # Data validation and settings management
+pytest>=7.0.0             # Testing framework
+pytest-cov>=4.0.0         # Test coverage
+pytest-asyncio>=0.21.0    # Async testing support
+
+# PDF processing and text extraction
+PyPDF2>=3.0.0             # PDF text extraction fallback
+tabula-py>=2.7.0          # Alternative table extraction
+pdfplumber>=0.9.0         # Text-based PDF analysis
+
+# Data processing and validation
+numpy>=1.24.0             # Numerical operations
+openpyxl>=3.1.0           # Excel export capabilities
+python-dateutil>=2.8.0    # Date parsing and handling
+
+# Logging and monitoring
+structlog>=23.0.0         # Structured logging
+python-json-logger>=2.0.0 # JSON logging format
+
+# Optional: ML-based text extraction (for future enhancement)
+spacy>=3.6.0              # NLP for text understanding
+transformers>=4.30.0      # For advanced text processing
+
+# Development dependencies
+black>=23.0.0             # Code formatting
+flake8>=6.0.0             # Code linting
+mypy>=1.4.0               # Type checking
+pre-commit>=3.3.0         # Git hooks for code quality

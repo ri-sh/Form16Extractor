@@ -1,0 +1,64 @@
+{
+  "status": "success",
+  "processing_info": {
+    "file_name": "Form16.pdf",
+    "processing_time_seconds": 7.5,
+    "extraction_timestamp": "2025-09-06 15:26:10",
+    "tables_processed": 12,
+    "pdf_extraction_strategy": "camelot_lattice",
+    "pdf_extraction_confidence": 0.7294229873706938
+  },
+  "form16_data": {
+    "employee_information": {
+      "name": "RISHABH ROY",
+      "pan": "BYHPR6078P",
+      "address": "Torrey Pines, 3rd Floor, Embassy Golflinks Software Business Park, Domlur S.O Bangalore North,, Bengaluru - 560071",
+      "designation": "SENIOR CORPORATE",
+      "department": null,
+      "employment_type": null,
+      "employee_id": null
+    },
+    "employer_information": {
+      "name": null,
+      "tan": null,
+      "address": null
+    },
+    "salary_details": {
+      "basic_salary": null,
+      "allowances": {},
+      "perquisites": {},
+      "gross_salary": null
+    },
+    "tax_deductions": {
+      "quarterly_tds": [],
+      "chapter_vi_a_deductions": {},
+      "total_tax_deducted": null
+    },
+    "metadata": {
+      "assessment_year": null,
+      "financial_year": null,
+      "certificate_number": null
+    }
+  },
+  "extraction_quality": {
+    "confidence_scores": {
+      "name": 0.95,
+      "pan": 0.95,
+      "employee_id": 0.0,
+      "designation": 0.95,
+      "address": 0.7
+    },
+    "fields_extracted": {
+      "employee": {
+        "total_fields": 7,
+        "extracted_fields": 4,
+        "extraction_rate": 57.1
+      },
+      "overall": {
+        "current_phase": "Employee Extraction Complete",
+        "next_phase": "Employer, Salary, Tax Extraction",
+        "completion_status": "Phase 1 of 4 complete"
+      }
+    }
+  }
+}
