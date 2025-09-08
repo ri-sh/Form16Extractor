@@ -286,6 +286,9 @@ class Form16Document(BaseModel):
     extraction_errors: List[str] = Field(default_factory=list)
     missing_fields: List[str] = Field(default_factory=list)
     
+    # Detailed perquisite breakdown from Form 12BA
+    detailed_perquisites: Dict[str, float] = Field(default_factory=dict)
+    
     # Raw data preservation
     raw_tables: List[Dict[str, Any]] = Field(default_factory=list)
     processing_metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -353,23 +356,234 @@ class Form16Document(BaseModel):
         return (avg_confidence * 0.4 + completeness * 0.5 + error_penalty * 0.1) * 100
     
     def to_json_output(self) -> Dict[str, Any]:
-        """Convert to clean JSON output for CLI"""
+        """Convert to standard Form16 JSON format matching form16_json_structure.json"""
+        import datetime
+        
+        # Get current timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         return {
-            "form16_data": {
-                "employee_info": self.employee.dict(exclude_none=True),
-                "employer_info": self.employer.dict(exclude_none=True),
-                "salary_breakdown": self.salary.dict(exclude_none=True),
-                "quarterly_tds": [q.dict(exclude_none=True) for q in self.quarterly_tds],
-                "deductions": {
-                    "chapter_vi_a": self.chapter_via_deductions.dict(exclude_none=True),
-                    "section_16": self.section16_deductions.dict(exclude_none=True)
-                },
-                "tax_computation": self.tax_computation.dict(exclude_none=True),
-                "metadata": self.metadata.dict(exclude_none=True)
+            "status": "success",
+            "metadata": {
+                "file_name": self.processing_metadata.get("file_name", "unknown.pdf"),
+                "processing_time_seconds": self.processing_metadata.get("processing_time", 0.0),
+                "extraction_timestamp": timestamp,
+                "extractor_version": "1.0.0"
             },
-            "extraction_summary": self.get_extraction_summary(),
-            "processing_info": self.processing_metadata
+            "form16": {
+                "part_a": {
+                    "header": {
+                        "form_number": "FORM NO. 16",
+                        "rule_reference": "[See rule 31(1)(a)]",
+                        "certificate_description": "Certificate under Section 203 of the Income-tax Act, 1961",
+                        "certificate_number": self.metadata.certificate_number if self.metadata else None,
+                        "last_updated": None
+                    },
+                    "employer": {
+                        "name": self.employer.name if self.employer else None,
+                        "address": self.employer.address if self.employer else None,
+                        "tan": self.employer.tan if self.employer else None,
+                        "pan": self.employer.pan if self.employer else None,
+                        "contact_number": None,
+                        "email": None
+                    },
+                    "employee": {
+                        "name": self.employee.name if self.employee else None,
+                        "pan": self.employee.pan if self.employee else None,
+                        "address": self.employee.address if self.employee else None,
+                        "employee_reference_number": None
+                    },
+                    "employment_period": {
+                        "from": None,
+                        "to": None
+                    },
+                    "assessment_year": None,
+                    "quarterly_tds_summary": self._format_quarterly_tds_summary(),
+                    "verification": {
+                        "place": None,
+                        "date": None,
+                        "person_responsible": {
+                            "name": None,
+                            "designation": None,
+                            "father_name": None
+                        }
+                    }
+                },
+                "part_b": {
+                    "header": {
+                        "form_number": "FORM NO. 16",
+                        "part": "PART B",
+                        "certificate_description": "Details of Salary Paid and any other income and tax deducted",
+                        "certificate_number": None,
+                        "last_updated": None
+                    },
+                    "financial_year": None,
+                    "assessment_year": None,
+                    "employee_status": {
+                        "is_director": False,
+                        "has_substantial_interest": False,
+                        "opted_out_of_115bac": None
+                    },
+                    "gross_salary": self._format_salary_breakdown(),
+                    "allowances_exempt_under_section_10": self._format_exemptions(),
+                    "deductions_under_section_16": self._format_section16_deductions(),
+                    "chapter_vi_a_deductions": self._format_chapter_via_deductions(),
+                    "tax_computation": self._format_tax_computation(),
+                    "employee_declaration": {
+                        "declaration_date": None,
+                        "place": None,
+                        "employee_name": self.employee.name if self.employee else None,
+                        "designation": self.employee.designation if self.employee else None
+                    }
+                }
+            },
+            "extraction_metrics": {
+                "confidence_scores": {
+                    "employee": self._get_confidence_scores("employee"),
+                    "employer": self._get_confidence_scores("employer"),
+                    "salary": self._get_confidence_scores("salary"),
+                    "deductions": self._get_confidence_scores("deductions"),
+                    "tax": self._get_confidence_scores("tax")
+                },
+                "extraction_summary": self.get_extraction_summary()
+            }
         }
+    
+    def _format_quarterly_tds_summary(self) -> Dict[str, Any]:
+        """Format quarterly TDS data for part_a structure"""
+        quarters = {"quarter_1": {}, "quarter_2": {}, "quarter_3": {}, "quarter_4": {}}
+        
+        for i, q in enumerate(self.quarterly_tds[:4]):
+            quarter_key = f"quarter_{i+1}"
+            quarters[quarter_key] = {
+                "period": None,
+                "receipt_numbers": [q.receipt_number] if q.receipt_number else [],
+                "amount_deducted": float(q.tax_deducted) if q.tax_deducted else None,
+                "amount_deposited": float(q.tax_deposited) if q.tax_deposited else None,
+                "deposited_date": None,
+                "status": None
+            }
+        
+        total_deducted = sum(float(q.tax_deducted or 0) for q in self.quarterly_tds)
+        total_deposited = sum(float(q.tax_deposited or 0) for q in self.quarterly_tds)
+        
+        quarters["total_tds"] = {
+            "deducted": total_deducted if total_deducted > 0 else None,
+            "deposited": total_deposited if total_deposited > 0 else None
+        }
+        
+        return quarters
+    
+    def _format_salary_breakdown(self) -> Dict[str, Any]:
+        """Format salary data for part_b gross_salary structure"""
+        if not self.salary:
+            return {
+                "section_17_1_salary": None,
+                "section_17_2_perquisites": None, 
+                "section_17_3_profits_in_lieu": None,
+                "total": None,
+                "salary_from_other_employers": None
+            }
+        
+        return {
+            "section_17_1_salary": float(self.salary.salary_section_17_1) if self.salary.salary_section_17_1 else None,
+            "section_17_2_perquisites": float(self.salary.perquisites_value) if self.salary.perquisites_value else None,
+            "section_17_3_profits_in_lieu": float(self.salary.profit_in_lieu) if self.salary.profit_in_lieu is not None else None,
+            "total": float(self.salary.gross_salary) if self.salary.gross_salary else None,
+            "salary_from_other_employers": None
+        }
+    
+    def _format_exemptions(self) -> Dict[str, Any]:
+        """Format exemptions for part_b structure"""
+        if not self.salary:
+            return {
+                "house_rent_allowance": None,
+                "leave_travel_allowance": None,
+                "gratuity": None,
+                "commuted_pension": None,
+                "cash_equivalent_of_leave": None,
+                "other_exemptions": [],
+                "total_exemption": None
+            }
+        
+        return {
+            "house_rent_allowance": float(self.salary.hra_exemption) if self.salary.hra_exemption else None,
+            "leave_travel_allowance": None,
+            "gratuity": None,
+            "commuted_pension": None,
+            "cash_equivalent_of_leave": None,
+            "other_exemptions": [],
+            "total_exemption": float(self.salary.other_exemptions) if self.salary.other_exemptions else None
+        }
+    
+    def _format_section16_deductions(self) -> Dict[str, Any]:
+        """Format Section 16 deductions"""
+        if not self.section16_deductions:
+            return {
+                "standard_deduction": None,
+                "entertainment_allowance": None,
+                "professional_tax": None,
+                "total": None
+            }
+        
+        return {
+            "standard_deduction": float(self.section16_deductions.standard_deduction) if self.section16_deductions.standard_deduction else None,
+            "entertainment_allowance": float(self.section16_deductions.entertainment_allowance) if self.section16_deductions.entertainment_allowance else None,
+            "professional_tax": float(self.section16_deductions.professional_tax) if self.section16_deductions.professional_tax else None,
+            "total": float(self.section16_deductions.total_section_16) if self.section16_deductions.total_section_16 else None
+        }
+    
+    def _format_chapter_via_deductions(self) -> Dict[str, Any]:
+        """Format Chapter VI-A deductions with comprehensive structure"""
+        if not self.chapter_via_deductions:
+            return {"total_deductions": None}
+        
+        return {
+            "section_80C": {
+                "components": {
+                    "life_insurance_premium": float(self.chapter_via_deductions.life_insurance_premium) if self.chapter_via_deductions.life_insurance_premium else None,
+                    "provident_fund": float(self.chapter_via_deductions.ppf_contribution) if self.chapter_via_deductions.ppf_contribution else None,
+                    "ppf": None,
+                    "nsc": None,
+                    "ulip": None,
+                    "tuition_fees": None,
+                    "principal_repayment_housing_loan": None,
+                    "sukanya_samriddhi": None,
+                    "fixed_deposit_5years": None,
+                    "others": None
+                },
+                "gross_amount": float(self.chapter_via_deductions.section_80c_total) if self.chapter_via_deductions.section_80c_total else None,
+                "deductible_amount": float(self.chapter_via_deductions.section_80c_total) if self.chapter_via_deductions.section_80c_total else None
+            },
+            "total_deductions": float(self.chapter_via_deductions.total_chapter_via_deductions) if self.chapter_via_deductions.total_chapter_via_deductions else None
+        }
+    
+    def _format_tax_computation(self) -> Dict[str, Any]:
+        """Format tax computation data"""
+        if not self.tax_computation:
+            return {
+                "tax_on_total_income": None,
+                "total_tax_liability": None,
+                "health_and_education_cess": None
+            }
+        
+        return {
+            "tax_on_total_income": float(self.tax_computation.tax_on_total_income) if self.tax_computation.tax_on_total_income else None,
+            "total_tax_liability": float(self.tax_computation.total_tax_liability) if self.tax_computation.total_tax_liability else None,
+            "health_and_education_cess": float(self.tax_computation.health_education_cess) if self.tax_computation.health_education_cess else None
+        }
+    
+    def _get_confidence_scores(self, section: str) -> Dict[str, float]:
+        """Get confidence scores for a section"""
+        # Default confidence scores - can be enhanced with actual confidence data
+        default_scores = {
+            "employee": {"name": 0.95, "pan": 0.95, "address": 0.7},
+            "employer": {"name": 0.9, "tan": 0.95, "address": 0.9},
+            "salary": {},
+            "deductions": {},
+            "tax": {}
+        }
+        return default_scores.get(section, {})
 
 
 class ExtractionResult(BaseModel):

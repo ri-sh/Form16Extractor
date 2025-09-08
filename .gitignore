@@ -75,6 +75,18 @@ form16_extracted.json
 *extracted*.json
 *result*.json
 *output*.json
+*.json
+*_test*.json
+current_*.json
+final_*.json
+corrected_*.json
+
+# Personal data files - never commit
+
+*test_comprehensive*
+*final_test*
+*test_employer_real*
+*test_phase2*
 
 
 
@@ -86,3 +98,57 @@ logs/
 *.tmp
 *.temp
 temp/
+
+# Analysis and debug files
+debug_*.py
+analyze_*.py
+*_analysis.py
+simple_structure_analysis.py
+extract_all_tables.py
+focused_extraction.py
+*_debug.py
+extracted_tables/
+*.pkl
+table_extraction.log
+
+# Test and hypothesis files
+test_extraction_hypotheses.py
+*_hypothesis.py
+gap_analysis_results.pklbackup_files/
+archived_tests/
+comprehensive_validation_test.py
+*validation_test*.py
+
+# Analysis and test files - organized folder
+analysis_and_tests/
+
+# Backup and archived files
+backup_files/
+
+# Task management and documentation (internal)
+form16_extractor_tasks.txt
+STAFF_SE_IMPLEMENTATION_APPROACH.md
+json_structure_design.md
+FORM16_JSON_STRUCTURE_FINAL.md
+
+# Comparison and analysis results
+*comparison*.json
+*comprehensive*.json
+*_results.json
+
+# Metrics and monitoring
+metrics/
+logs/
+
+# Integration tests
+integration_tests/
+
+# Documentation and analysis files (may contain sensitive info)
+*.md
+*.txt
+
+# Test files (but keep tests/unit/ folder)
+*_test*.py
+*test_*.py
+!tests/unit/**
+!tests/integration/**

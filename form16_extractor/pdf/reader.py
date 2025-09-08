@@ -110,7 +110,7 @@ class RobustPDFProcessor(IPDFProcessor):
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
         
-        self.logger.info(f"🔍 Extracting tables from: {pdf_path.name}")
+        self.logger.info(f"Extracting tables from: {pdf_path.name}")
         
         # Try strategies in order of preference
         preferred_order = [
@@ -133,7 +133,7 @@ class RobustPDFProcessor(IPDFProcessor):
                 result = self._extract_with_strategy(pdf_path, strategy)
                 
                 if result and result.tables:
-                    self.logger.info(f"✅ Success with {strategy.value}: {len(result.tables)} tables extracted")
+                    self.logger.info(f"Success with {strategy.value}: {len(result.tables)} tables extracted")
                     
                     # Calculate confidence score for this result
                     confidence = self._calculate_extraction_confidence(result.tables, strategy)
@@ -168,11 +168,11 @@ class RobustPDFProcessor(IPDFProcessor):
                 warnings=all_warnings,
                 page_numbers=[]
             )
-            self.logger.error("❌ All extraction strategies failed")
+            self.logger.error("All extraction strategies failed")
         else:
             best_result.processing_time = processing_time
             best_result.warnings = list(set(all_warnings))  # Remove duplicates
-            self.logger.info(f"🎯 Best result: {best_result.strategy_used.value} "
+            self.logger.info(f"Best result: {best_result.strategy_used.value} "
                            f"(confidence: {best_result.confidence_score:.2f})")
         
         return best_result

@@ -21,8 +21,10 @@ from typing import List, Dict, Any
 import asyncio
 from datetime import datetime
 
-# Import our modules (will be implemented)
-# from src.application.form16_extractor import Form16ExtractorService
+# Import our extraction modules  
+from form16_extractor.extractors.enhanced_form16_extractor import EnhancedForm16Extractor, ProcessingLevel
+from form16_extractor.pdf.reader import RobustPDFProcessor
+from form16_extractor.utils.json_builder import Form16JSONBuilder
 # from src.domain.models import ExtractionResult
 
 
@@ -31,7 +33,8 @@ class Form16CLI:
     
     def __init__(self):
         self.version = "1.0.0"
-        # self.extractor = Form16ExtractorService()
+        self.extractor = EnhancedForm16Extractor(ProcessingLevel.ENHANCED)  # Enhanced level with zero value recognition
+        self.pdf_processor = RobustPDFProcessor()
     
     def create_parser(self) -> argparse.ArgumentParser:
         """Create the command-line argument parser"""
@@ -73,7 +76,11 @@ Examples:
         )
         extract_parser.add_argument(
             "--output", "-o", type=Path,
-            help="Output JSON file path (default: auto-generated)"
+            help="Output JSON file path (default: auto-generated in current directory)"
+        )
+        extract_parser.add_argument(
+            "--out-dir", type=Path,
+            help="Output directory path (default: current directory)"
         )
         extract_parser.add_argument(
             "--fields", type=str,
@@ -170,65 +177,67 @@ Examples:
             
             print(f"Processing: {input_file}")
             
-            # Determine output file
+            # Determine output file and directory
             if args.output:
+                # If specific output file provided, use it as-is
                 output_file = args.output
             else:
-                output_file = input_file.with_suffix(f'.{args.format}')
+                # Auto-generate filename based on input file
+                base_filename = input_file.stem + f'.{args.format}'
+                
+                # Determine output directory
+                if args.out_dir:
+                    # Use specified output directory
+                    output_dir = args.out_dir
+                    output_dir.mkdir(parents=True, exist_ok=True)  # Create directory if needed
+                    output_file = output_dir / base_filename
+                else:
+                    # Use current directory (default behavior)
+                    output_file = Path.cwd() / base_filename
             
             start_time = time.time()
             
-            # TODO: Implement actual extraction
-            # result = self.extractor.extract_from_file(input_file)
+            # Extract tables from PDF
+            if args.verbose:
+                print(f"Processing PDF: {input_file}")
             
-            # Mock result for now
-            result = {
-                "status": "success",
-                "file_processed": str(input_file),
-                "processing_time_seconds": time.time() - start_time,
-                "form16_data": {
-                    "employee_info": {
-                        "name": "EXTRACTED_NAME",
-                        "pan": "EXTRACTED_PAN"
-                    },
-                    "employer_info": {
-                        "name": "EXTRACTED_EMPLOYER",
-                        "tan": "EXTRACTED_TAN"
-                    },
-                    "salary_breakdown": {},
-                    "quarterly_tds": [],
-                    "deductions": {},
-                    "tax_computation": {},
-                    "metadata": {}
-                },
-                "extraction_summary": {
-                    "total_fields": 50,
-                    "extracted_fields": 0,
-                    "extraction_rate": 0.0
-                }
-            }
+            extraction_result = self.pdf_processor.extract_tables(input_file)
+            tables = extraction_result.tables
             
-            # Save result
+            if args.verbose:
+                print(f"Extracted {len(tables)} tables from PDF")
+            
+            # Extract Form16 data
+            form16_result = self.extractor.extract_all(tables)
+            processing_time = time.time() - start_time
+            
+            # Use proper Form16 JSON builder for correct Part A/Part B structure
+            result = Form16JSONBuilder.build_comprehensive_json(
+                form16_doc=form16_result,
+                pdf_file_name=input_file.name,
+                processing_time=processing_time,
+                extraction_metadata=getattr(form16_result, 'extraction_metadata', {})
+            )
+            
+            # Save result with proper formatting
             if args.format == "json":
                 with open(output_file, 'w') as f:
-                    if args.pretty:
-                        json.dump(result, f, indent=2, default=str)
-                    else:
-                        json.dump(result, f, default=str)
+                    # Always use pretty formatting to match specification
+                    json.dump(result, f, indent=2, default=str)
             
-            print(f"✅ Extraction completed successfully!")
-            print(f"📄 Input: {input_file}")
-            print(f"📄 Output: {output_file}")
-            print(f"⏱️  Processing time: {result['processing_time_seconds']:.2f} seconds")
+            print(f"Extraction completed successfully!")
+            print(f"Input: {input_file}")
+            print(f"Output: {output_file}")
+            print(f"Processing time: {result['metadata']['processing_time_seconds']:.2f} seconds")
             
-            if 'extraction_summary' in result:
-                summary = result['extraction_summary']
-                print(f"📊 Extracted {summary['extracted_fields']}/{summary['total_fields']} fields ({summary['extraction_rate']:.1f}%)")
+            if 'extraction_metrics' in result and 'extraction_summary' in result['extraction_metrics']:
+                summary = result['extraction_metrics']['extraction_summary']
+                print(f"Extracted {summary['extracted_fields']}/{summary['total_fields']} fields ({summary['extraction_rate']:.1f}%)")
             
             return 0
             
         except Exception as e:
-            print(f"❌ Error processing file: {e}")
+            print(f"Error processing file: {e}")
             if args.verbose:
                 import traceback
                 traceback.print_exc()
@@ -275,22 +284,22 @@ Examples:
                     result = self.extract_single_file(MockArgs())
                     if result == 0:
                         successful += 1
-                        print(f"  ✅ Success")
+                        print(f"  Success")
                     else:
                         failed += 1
-                        print(f"  ❌ Failed")
+                        print(f"  Failed")
                         if not args.continue_on_error:
                             break
                             
                 except Exception as e:
                     failed += 1
-                    print(f"  ❌ Error: {e}")
+                    print(f"  Error: {e}")
                     if not args.continue_on_error:
                         break
             
             total_time = time.time() - start_time
             
-            print(f"\n📊 Batch Processing Summary:")
+            print(f"\nBatch Processing Summary:")
             print(f"   Total files: {len(pdf_files)}")
             print(f"   Successful: {successful}")
             print(f"   Failed: {failed}")
@@ -300,7 +309,7 @@ Examples:
             return 0 if failed == 0 else 1
             
         except Exception as e:
-            print(f"❌ Batch processing error: {e}")
+            print(f"Batch processing error: {e}")
             return 1
     
     def validate_results(self, args) -> int:
@@ -318,16 +327,16 @@ Examples:
             
             # Basic validation
             if 'status' not in data:
-                print("❌ Missing 'status' field")
+                print("Missing 'status' field")
                 return 1
             
             if data['status'] != 'success':
-                print(f"❌ Extraction was not successful: {data.get('error', 'Unknown error')}")
+                print(f"Extraction was not successful: {data.get('error', 'Unknown error')}")
                 return 1
             
             # Validate form16_data structure
             if 'form16_data' not in data:
-                print("❌ Missing 'form16_data' field")
+                print("Missing 'form16_data' field")
                 return 1
             
             form16_data = data['form16_data']
@@ -335,32 +344,32 @@ Examples:
             
             for section in required_sections:
                 if section not in form16_data:
-                    print(f"❌ Missing required section: {section}")
+                    print(f"Missing required section: {section}")
                     if args.strict:
                         return 1
                 else:
-                    print(f"✅ Found section: {section}")
+                    print(f"Found section: {section}")
             
             # Check extraction summary
             if 'extraction_summary' in data:
                 summary = data['extraction_summary']
                 rate = summary.get('extraction_rate', 0)
-                print(f"📊 Extraction rate: {rate:.1f}%")
+                print(f"Extraction rate: {rate:.1f}%")
                 
                 if rate < 50 and args.strict:
-                    print("❌ Extraction rate too low for strict mode")
+                    print("Extraction rate too low for strict mode")
                     return 1
             
-            print("✅ Validation passed!")
+            print("Validation passed!")
             return 0
             
         except Exception as e:
-            print(f"❌ Validation error: {e}")
+            print(f"Validation error: {e}")
             return 1
     
     def run_tests(self, args) -> int:
         """Run tests with sample files"""
-        print("🧪 Running Form 16 extractor tests...")
+        print("Running Form 16 extractor tests...")
         
         if args.sample_dir:
             sample_dir = args.sample_dir
@@ -393,11 +402,11 @@ Examples:
             
             result = self.extract_single_file(MockArgs())
             if result == 0:
-                print("  ✅ Test passed")
+                print("  Test passed")
             else:
-                print("  ❌ Test failed")
+                print("  Test failed")
         
-        print("\n🧪 Test suite completed!")
+        print("\nTest suite completed!")
         return 0
     
     def main(self):

@@ -1,0 +1,1 @@
+# Test salary extractors package
