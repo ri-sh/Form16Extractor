@@ -61,38 +61,10 @@ if result.status == "success":
 # Extract single Form16
 python cli.py extract --file form16.pdf --output result.json
 
-# Batch process multiple files
-python cli.py batch --input-dir ./pdfs/ --output-dir ./results/
-
 # Validate extraction results
 python cli.py validate --file result.json
 ```
 
-### Batch Processing
-
-```python
-from pathlib import Path
-from form16_extractor.extractors.enhanced_form16_extractor import EnhancedForm16Extractor
-
-extractor = EnhancedForm16Extractor()
-
-# Process directory of Form16 files
-pdf_dir = Path("form16_documents")
-results = []
-
-for pdf_file in pdf_dir.glob("*.pdf"):
-    try:
-        result = extractor.extract_from_file(str(pdf_file))
-        results.append({
-            "file": pdf_file.name,
-            "status": result.status,
-            "data": result.data if result.status == "success" else None
-        })
-    except Exception as e:
-        print(f"Error processing {pdf_file}: {e}")
-
-print(f"Processed {len(results)} files")
-```
 
 ## Data Structure
 
@@ -257,7 +229,7 @@ See `ENHANCED_JSON_STRUCTURE.md` for complete field specifications.
 ## Use Cases
 
 - **Payroll Systems**: Automate Form16 data import for salary processing
-- **Tax Software**: Bulk process employee tax certificates  
+- **Tax Software**: Process employee tax certificates  
 - **HR Analytics**: Extract compensation data for analysis
 - **Compliance Tools**: Verify tax computations and TDS deposits
 - **Financial Services**: Process loan applications requiring income verification

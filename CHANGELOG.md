@@ -79,12 +79,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced Format Support**:
   - Support for scanned Form16 documents (OCR)
   - Better handling of custom employer formats
-  - Multi-language Form16 support
 
 - **Advanced Features**:
   - Batch processing with progress tracking
   - Form16 validation against IT rules
-  - Historical data comparison across years
 
 - **Integration**:
   - CLI tool for command-line processing
@@ -92,6 +90,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Excel/CSV export options
 
 ### [1.2.0] - Planned
+- **Tax Calculator Integration**:
+  - Built-in tax calculation engine based on current IT Act provisions
+  - Automatic tax liability computation and verification
+  - Support for both old and new tax regimes
+  - Tax optimization suggestions based on available deductions
+  - Cross-verification of employer calculations with actual tax rules
+
+- **Multi-Company Form16 Support**:
+  - Support for employees with multiple employers in the same financial year
+  - Automatic consolidation of salary and TDS across multiple Form16s
+  - Combined tax computation for aggregate income
+  - Duplicate deduction detection across employers
+  - Comprehensive annual tax summary from multiple sources
+
 - **Machine Learning Enhancements**:
   - ML-based field detection for complex layouts
   - Automatic format learning and adaptation
