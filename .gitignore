@@ -130,6 +130,7 @@ form16_extractor_tasks.txt
 STAFF_SE_IMPLEMENTATION_APPROACH.md
 json_structure_design.md
 FORM16_JSON_STRUCTURE_FINAL.md
+STAFF_SE_IMPLEMENTATION_APPROACH.md
 
 # Comparison and analysis results
 *comparison*.json
@@ -144,7 +145,7 @@ logs/
 integration_tests/
 
 # Documentation and analysis files (may contain sensitive info)
-*.md
+
 *.txt
 
 # Test files (but keep tests/unit/ folder)
