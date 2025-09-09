@@ -391,7 +391,7 @@ class TableStructureAnalyzer:
                                 self.logger.debug(f"No amount found adjacent to pattern at ({row_idx}, {col_idx})")
             
             if patterns_found:
-                self.logger.warning(f"Found {len(patterns_found)} pattern matches for {section_name} but no amounts: {patterns_found}")
+                self.logger.debug(f"Found {len(patterns_found)} pattern matches for {section_name} but no amounts: {patterns_found}")
             else:
                 self.logger.debug(f"No {section_name} patterns found in table")
             

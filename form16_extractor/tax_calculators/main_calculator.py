@@ -134,7 +134,8 @@ class MultiYearTaxCalculator(ITaxCalculator):
                     results[regime_type] = self.calculate_tax(regime_input)
                 except Exception as e:
                     # Continue with other regime if one fails
-                    print(f"Warning: {regime_type.value} regime calculation failed: {e}")
+                    import logging
+                    logging.warning(f"{regime_type.value} regime calculation failed: {e}")
         
         # Add comparison data
         if TaxRegimeType.OLD in results and TaxRegimeType.NEW in results:

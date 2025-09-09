@@ -282,7 +282,8 @@ class ComprehensiveTaxCalculator(ITaxCalculator):
             
         except Exception as e:
             # If Section 89 calculation fails, log and continue without relief
-            print(f"Warning: Section 89 relief calculation failed: {e}")
+            import logging
+            logging.warning(f"Section 89 relief calculation failed: {e}")
             return Decimal('0')
     
     def _create_comprehensive_result(

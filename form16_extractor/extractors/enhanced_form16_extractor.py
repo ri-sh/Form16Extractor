@@ -378,9 +378,9 @@ class EnhancedForm16Extractor:
         
         try:
             # 4. Deductions extraction
-            print("DEBUG: Starting deductions extraction...")
+            self.logger.debug("Starting deductions extraction...")
             deductions_data, deductions_metadata = self.deductions_extractor.extract(tables_by_type)
-            print(f"DEBUG: Deductions extraction completed, data: {deductions_data}")
+            self.logger.debug(f"Deductions extraction completed, data: {deductions_data}")
             if deductions_data:
                 form16_doc.chapter_via_deductions = deductions_data  # Fixed field assignment
                 if self.logger:
