@@ -1,19 +1,22 @@
 # Form16 Extractor
 
-A production-ready Python library for extracting structured data from Indian Form16 tax documents.
+A comprehensive Python library for extracting structured data from Indian Form16 tax documents with advanced multi-company consolidation and tax calculation capabilities.
 
 ## Overview
 
-Form16 Extractor converts PDF Form16 documents into clean, structured JSON data. Built to handle real-world variations in Form16 formats from different employers and years, it provides reliable extraction of employee information, salary breakdowns, tax deductions, and TDS details.
+Form16 Extractor transforms PDF Form16 documents into structured JSON data and provides comprehensive tax calculation services. Designed to handle real-world complexities including multi-employer scenarios, varying PDF formats, and accurate tax computations across different tax regimes.
 
-This library was developed to address the practical challenges of processing Form16 documents at scale - handling inconsistent layouts, mixed table structures, and varying PDF quality while maintaining high accuracy.
+This library addresses practical challenges faced by tax professionals, HR departments, and individuals managing multiple Form16 documents from different employers within the same financial year.
 
 ## Key Features
 
-- **High Accuracy**: Domain-driven extraction engine with 85-90% field coverage on real Form16 documents
+- **Multi-Company Consolidation**: Seamlessly consolidate Form16 documents from multiple employers within the same financial year
+- **Comprehensive Tax Calculations**: Accurate tax computation with support for both old and new tax regimes
+- **Financial Year Validation**: Ensures consolidation integrity by validating matching financial years
+- **High Accuracy Extraction**: Domain-driven extraction engine with 85-90% field coverage on real Form16 documents  
 - **Format Flexibility**: Handles variations in layouts across different employers and tax software
-- **Privacy Focused**: Local processing only - no data transmission or storage
-- **Production Ready**: Comprehensive error handling, logging, and validation
+- **Privacy Focused**: Local processing only - no data transmission or external dependencies
+- **Production Ready**: Comprehensive error handling, logging, validation, and CLI interface
 - **Developer Experience**: Full type hints, detailed documentation, and intuitive API
 
 ## Form16 Background
@@ -58,11 +61,68 @@ if result.status == "success":
 ### Command Line Usage
 
 ```bash
-# Extract single Form16
-python cli.py extract --file form16.pdf --output result.json
+# Extract single Form16 with tax calculation
+python cli.py extract --file form16.pdf --calculate-tax --output result.json
+
+# Extract with detailed tax breakdown
+python cli.py extract --file form16.pdf --calculate-tax --summary
+
+# Consolidate multiple Form16s from same financial year
+python cli.py consolidate --files form16_company1.pdf form16_company2.pdf --calculate-tax
+
+# Compare tax regimes
+python cli.py extract --file form16.pdf --calculate-tax --tax-regime both
 
 # Validate extraction results
 python cli.py validate --file result.json
+```
+
+### Multi-Company Consolidation
+
+For employees working at multiple companies in the same financial year:
+
+```python
+from form16_extractor.consolidators.multi_company_consolidator import MultiCompanyForm16Consolidator
+
+consolidator = MultiCompanyForm16Consolidator()
+
+# Extract individual Form16s
+form16_list = [
+    extractor.extract_from_file("company1_form16.pdf").data,
+    extractor.extract_from_file("company2_form16.pdf").data
+]
+
+# Consolidate with validation
+consolidated_result = consolidator.consolidate_form16s(form16_list)
+
+if consolidated_result.status == "success":
+    consolidated_form16 = consolidated_result.data
+    print(f"Total Gross Salary: ₹{consolidated_form16.salary_breakdown.gross_salary:,.2f}")
+    print(f"Combined TDS: ₹{consolidated_form16.quarterly_tds.total_tds:,.2f}")
+```
+
+### Tax Calculation
+
+```python
+from form16_extractor.tax_calculators.main_calculator import MainTaxCalculator
+
+# Initialize tax calculator
+tax_calculator = MainTaxCalculator(financial_year="2023-24")
+
+# Calculate tax for both regimes
+tax_results = tax_calculator.calculate_comprehensive_tax(
+    form16_data=form16_data,
+    city_type="metro",
+    age_category="below_60"
+)
+
+# Compare regimes
+old_regime = tax_results["old_regime"]
+new_regime = tax_results["new_regime"]
+
+print(f"Old Regime Tax: ₹{old_regime.tax_liability:,.2f}")
+print(f"New Regime Tax: ₹{new_regime.tax_liability:,.2f}")
+print(f"Recommended: {tax_results['recommended_regime']}")
 ```
 
 
@@ -94,9 +154,11 @@ The extractor returns structured data with the following key components:
 - BSR codes and challan details
 
 ### Tax Computation
-- Taxable income calculation
-- Tax liability and surcharge
-- Final tax payable vs TDS
+- Comprehensive tax calculations for both old and new tax regimes
+- Accurate surcharge calculations with marginal relief
+- HRA, LTA, and other exemption calculations
+- Professional tax and Section 89 relief computations
+- Final tax liability vs TDS with refund/payable amounts
 
 ## Output JSON Structure
 
@@ -250,7 +312,7 @@ python -m pytest tests/unit/extractors/domains/
 
 ## Architecture
 
-The library uses a domain-driven design approach:
+The library uses a domain-driven design approach with comprehensive tax calculation and consolidation capabilities:
 
 ```
 form16_extractor/
@@ -262,9 +324,20 @@ form16_extractor/
 │   │   └── metadata/         # Document metadata and TDS
 │   ├── enhanced_form16_extractor.py  # Main orchestrator
 │   └── base/                 # Base interfaces
+├── tax_calculators/          # Comprehensive tax calculation system
+│   ├── engines/              # Tax regime engines (old/new)
+│   ├── components/           # HRA, LTA, gratuity calculators
+│   ├── rules/                # Year-specific tax rules
+│   └── interfaces/           # Calculator interfaces
+├── consolidators/            # Multi-company Form16 consolidation
+│   ├── multi_company_consolidator.py
+│   └── interfaces/           # Consolidation interfaces
+├── integrators/              # Form16 and tax calculation integration
 ├── models/                   # Pydantic data models
 ├── pdf/                      # PDF processing and table classification
-└── utils/                    # Helper utilities
+├── exceptions/               # Custom exception handling
+├── utils/                    # Helper utilities and validation
+└── cli.py                    # Command-line interface
 ```
 
 ## Requirements
@@ -318,6 +391,69 @@ Contributions are welcome! Please follow these guidelines:
 3. Add tests for new functionality  
 4. Ensure all tests pass
 5. Submit a pull request
+
+## Tax Calculation Features
+
+### Supported Tax Components
+
+The tax calculator includes comprehensive support for:
+
+**Income Tax Slabs**
+- Both old and new tax regime calculations for AY 2024-25
+- Automatic slab-wise tax computation
+- Marginal rate calculations
+
+**Surcharge and Cess**
+- Accurate surcharge calculation (10% for income > 50L, 15% for > 1Cr)
+- Marginal relief for surcharge threshold crossings
+- 4% Health and Education Cess on total tax
+
+**Exemptions and Deductions**
+- HRA exemption with metro/non-metro differentiation
+- LTA exemption with block year validation
+- Section 80C investments (PPF, ELSS, insurance)
+- Section 80D medical insurance premiums
+- Professional tax deductions (state-wise)
+- Section 89 relief for salary arrears
+
+**Perquisite Calculations**
+- Accommodation perquisite valuation
+- Motor car perquisite (owned vs leased)
+- ESOP perquisite calculations
+- Medical reimbursement limits
+
+**Gratuity Calculations**
+- Statutory gratuity exemption (up to 20L)
+- Service period and salary-based calculations
+
+### Financial Year Support
+
+The system is designed for multi-year support with currently implemented rules for:
+- Assessment Year 2024-25 (Financial Year 2023-24)
+- Extensible architecture for future years
+
+### Regime Comparison
+
+Automatically compares both tax regimes and provides recommendations based on:
+- Net tax liability comparison
+- Available deduction optimization
+- Effective tax rate analysis
+
+## Multi-Company Scenarios
+
+### Common Use Cases
+
+- **Job Changes**: Employees switching companies mid-year
+- **Consultant Work**: Working for multiple employers simultaneously  
+- **Part-time Engagements**: Additional income from secondary employers
+- **Freelance Income**: Multiple client relationships with TDS
+
+### Validation Features
+
+- **Financial Year Matching**: Ensures all Form16s belong to the same assessment year
+- **Employee Consistency**: Validates PAN and employee details across documents
+- **Duplicate Detection**: Identifies and warns about potential duplicate entries
+- **TDS Verification**: Cross-validates TDS amounts and dates
 
 ### Development Setup
 

@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2024-09-09
+
+### Added
+
+#### Multi-Company Form16 Consolidation
+- **Multi-Company Support**: Complete implementation for employees working at multiple companies within the same financial year
+- **Financial Year Validation**: Automatic validation to ensure all Form16s belong to the same assessment year
+- **Consolidated Tax Calculation**: Combined income and TDS computation across multiple employers
+- **Employee Consistency Validation**: PAN and employee detail verification across all documents
+- **Duplicate Detection**: Identification and warning system for potential duplicate entries
+
+#### Comprehensive Tax Calculation System
+- **Dual Regime Support**: Complete tax calculation for both old and new tax regimes (AY 2024-25)
+- **Accurate Surcharge Calculations**: Proper surcharge computation (10% for >50L, 15% for >1Cr) with marginal relief
+- **HRA Calculator**: Metro/non-metro HRA exemption calculations with three-way comparison method
+- **LTA Calculator**: Leave Travel Allowance exemption with block year validation
+- **Professional Tax**: State-wise professional tax deduction calculations
+- **Section 89 Relief**: Salary arrears relief calculation
+- **Gratuity Calculator**: Statutory gratuity exemption calculation (up to 20L limit)
+- **Perquisite Valuation**: Comprehensive perquisite calculations for accommodation, motor car, ESOP
+- **Regime Comparison**: Automatic recommendation engine for optimal tax regime selection
+
+#### Enhanced CLI Interface
+- **Tax Calculation Commands**: Integrated tax calculation directly in CLI extraction workflow
+- **Consolidation Command**: Dedicated consolidation command for multiple Form16 processing
+- **Regime Comparison**: Side-by-side tax regime comparison with recommendations
+- **Summary Mode**: Detailed tax breakdown and computation display
+- **Validation Commands**: Enhanced validation for consolidated results
+
+#### Technical Infrastructure
+- **Domain-Driven Architecture**: Modular consolidator and tax calculator components
+- **Year-Specific Rule System**: Extensible tax rule provider architecture for multi-year support
+- **Exception Handling**: Comprehensive custom exception system for consolidation and tax calculations
+- **Interface-Based Design**: Clean interfaces for calculators, consolidators, and integrators
+- **Enhanced Validation**: Form16 consistency validation and financial year matching
+
+### Enhanced Features
+
+#### Data Models
+- **Consolidated Form16 Models**: New data models supporting multi-company scenarios
+- **Tax Calculation Models**: Comprehensive models for tax computation results
+- **Validation Models**: Enhanced validation with detailed error reporting
+
+#### Integration Layer
+- **Form16-Tax Integration**: Seamless integration between Form16 extraction and tax calculation
+- **Data Mapping**: Intelligent mapping between Form16 fields and tax calculation inputs
+- **Error Propagation**: Comprehensive error handling across integration layers
+
+#### Testing
+- **Comprehensive Test Suite**: New test suites for consolidation and tax calculation components
+- **Unit Test Coverage**: Full coverage for all new tax calculation and consolidation features
+- **Integration Tests**: End-to-end testing for multi-company scenarios
+
+### Changed
+- **CLI Interface**: Enhanced with new commands for consolidation and tax calculation
+- **Architecture**: Expanded from extraction-only to full tax processing ecosystem
+- **Data Models**: Extended to support multi-company and tax calculation scenarios
+- **Documentation**: Completely updated with new capabilities and professional language
+
+### Technical Details
+- **New Components**: 25+ new modules including consolidators, tax calculators, and integrators
+- **Code Quality**: Professional docstrings, comprehensive error handling, and clean architecture
+- **Performance**: Optimized for multi-document processing and complex tax calculations
+- **Extensibility**: Plugin architecture for future tax years and additional features
+
+### Migration from 1.x
+- **Backward Compatibility**: All existing Form16 extraction APIs remain unchanged
+- **New APIs**: Additional APIs for consolidation and tax calculation
+- **Enhanced Output**: Extended JSON structure with tax calculation results
+- **CLI Changes**: New commands added, existing commands remain compatible
+
 ## [1.0.0] - 2024-01-XX
 
 ### Added
@@ -75,34 +146,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upcoming Features (Roadmap)
 
-### [1.1.0] - Planned
+### [2.1.0] - Planned
 - **Enhanced Format Support**:
   - Support for scanned Form16 documents (OCR)
   - Better handling of custom employer formats
+  - Multi-language Form16 support
 
-- **Advanced Features**:
-  - Batch processing with progress tracking
-  - Form16 validation against IT rules
+- **Tax Optimization Engine**:
+  - Intelligent tax-saving suggestions based on individual financial profile
+  - Investment recommendation engine for tax efficiency
+  - Deduction optimization across multiple financial instruments
 
-- **Integration**:
-  - CLI tool for command-line processing
-  - REST API wrapper
-  - Excel/CSV export options
+- **Advanced Integration**:
+  - REST API wrapper for enterprise integration
+  - Excel/CSV export options with customizable templates
+  - Database integration for historical tax data management
 
-### [1.2.0] - Planned
-- **Tax Calculator Integration**:
-  - Built-in tax calculation engine based on current IT Act provisions
-  - Automatic tax liability computation and verification
-  - Support for both old and new tax regimes
-  - Tax optimization suggestions based on available deductions
-  - Cross-verification of employer calculations with actual tax rules
-
-- **Multi-Company Form16 Support**:
-  - Support for employees with multiple employers in the same financial year
-  - Automatic consolidation of salary and TDS across multiple Form16s
-  - Combined tax computation for aggregate income
-  - Duplicate deduction detection across employers
-  - Comprehensive annual tax summary from multiple sources
+### [2.2.0] - Planned
+- **Multi-Year Tax Planning**:
+  - Historical tax analysis across multiple assessment years
+  - Tax trend analysis and future planning recommendations
+  - Capital gains integration for comprehensive tax calculation
 
 - **Machine Learning Enhancements**:
   - ML-based field detection for complex layouts
@@ -110,9 +174,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved confidence scoring algorithms
 
 - **Developer Tools**:
-  - Form16 anonymization utilities
-  - Test data generators
+  - Form16 anonymization utilities for testing
+  - Test data generators for development
   - Debugging and visualization tools
+  - Performance profiling and optimization tools
 
 ---
 
