@@ -543,7 +543,6 @@ class MultiCompanyForm16Consolidator:
     
     def _names_match(self, name1: str, name2: str) -> bool:
         """Check if two names are similar (allowing minor variations)."""
-        # Simple implementation - can be enhanced with fuzzy matching
         name1_clean = name1.strip().upper().replace('.', '').replace(',', '')
         name2_clean = name2.strip().upper().replace('.', '').replace(',', '')
         return name1_clean == name2_clean

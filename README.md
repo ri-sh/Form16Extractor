@@ -99,6 +99,9 @@ python cli.py extract --file form16_sample.pdf --calculate-tax --summary --tax-r
 # Calculate for specific regime only
 python cli.py extract --file form16_sample.pdf --calculate-tax --tax-regime new
 
+# Visual colored display with regime comparison (best for analysis)
+python cli.py extract --file form16_sample.pdf --calculate-tax --display-mode colored
+
 # Consolidate multiple Form16s from different employers
 python cli.py consolidate --files company1.pdf company2.pdf --calculate-tax 
 ```

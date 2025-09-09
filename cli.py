@@ -301,9 +301,6 @@ Examples:
                     result['tax_calculations'] = tax_results
                     
                     # Always display tax results on terminal when --calculate-tax is used
-                    print(f"\n" + "="*80)
-                    print(f"FORM16 TAX COMPUTATION RESULTS")
-                    print(f"="*80)
                     if hasattr(args, 'display_mode') and args.display_mode == 'colored':
                         self._display_colored_regime_components(tax_results, args.tax_regime)
                     elif hasattr(args, 'summary') and args.summary:
@@ -630,7 +627,7 @@ Examples:
             return None
     
     def _calculate_form16_based_tax(self, form16_result, args):
-        """Calculate tax directly using ComprehensiveTaxCalculator (SIMPLE APPROACH!)."""
+        """Calculate tax liability using ComprehensiveTaxCalculator with Form16 data."""
         try:
             from form16_extractor.tax_calculators.comprehensive_calculator import (
                 ComprehensiveTaxCalculator, ComprehensiveTaxCalculationInput
@@ -861,262 +858,28 @@ Examples:
         return cli_result
     
     def _display_tax_summary(self, tax_results, regime_choice):
-        """Display compact tax summary on terminal."""
+        """Display compact tax summary using modular templates."""
+        from form16_extractor.display import SummaryDisplayRenderer
         
-        employee_info = tax_results['employee_info']
-        financial_data = tax_results['financial_data']
-        regime_comparison = tax_results['regime_comparison']
-        
-        # ANSI color codes
-        GREEN = '\033[92m'
-        RED = '\033[91m'
-        BOLD = '\033[1m'
-        RESET = '\033[0m'
-        
-        # Clean, professional header
-        print("\nFORM16 SUMMARY")
-        print("-" * 50)
-        print(f"Employee    : {employee_info['name']}")
-        print(f"PAN         : {employee_info['pan']}")
-        print(f"Employer    : {employee_info['employer']}")
-        
-        # Always show both gross salary and total taxable salary
-        section_17_1 = financial_data.get('section_17_1_salary', 0)
-        section_17_2 = financial_data.get('section_17_2_perquisites', 0)
-        total_taxable = financial_data.get('gross_salary', 0)
-        
-        print(f"Gross Salary : Rs {section_17_1:,.0f}")
-        if section_17_2 > 0:
-            print(f"Perquisites  : Rs {section_17_2:,.0f}")
-            print(f"Total Taxable Salary (Gross + Perquisites): Rs {total_taxable:,.0f}")
-        else:
-            print(f"Total Taxable Salary: Rs {total_taxable:,.0f}")
-            
-        print(f"Total TDS   : Rs {financial_data['total_tds']:,.0f}")
-        
-        print(f"\nTAX REGIME COMPARISON")
-        print("=" * 50)
-        
-        # Display regimes side by side in a clean format
-        if len(regime_comparison) == 2:
-            old_data = regime_comparison.get('old_regime', {})
-            new_data = regime_comparison.get('new_regime', {})
-            
-            # Determine which regime is better
-            old_tax = old_data.get('tax_liability', 0)
-            new_tax = new_data.get('tax_liability', 0)
-            better_is_old = old_tax < new_tax
-            
-            old_color = GREEN if better_is_old else RED
-            new_color = RED if better_is_old else GREEN
-            
-            print(f"{'PARTICULARS':<25} {old_color}{'OLD REGIME':<15}{RESET} {new_color}{'NEW REGIME':<15}{RESET}")
-            print("-" * 55)
-            print(f"{'Taxable Income':<25} {old_color}{old_data.get('taxable_income', 0):>12,.0f}{RESET}   {new_color}{new_data.get('taxable_income', 0):>12,.0f}{RESET}")
-            print(f"{'Tax Liability':<25} {old_color}{old_data.get('tax_liability', 0):>12,.0f}{RESET}   {new_color}{new_data.get('tax_liability', 0):>12,.0f}{RESET}")
-            print(f"{'TDS Paid':<25} {old_color}{old_data.get('tds_paid', 0):>12,.0f}{RESET}   {new_color}{new_data.get('tds_paid', 0):>12,.0f}{RESET}")
-            
-            # Refund/Tax Due
-            old_balance = old_data.get('refund_due', 0) if old_data.get('refund_due', 0) > 0 else -old_data.get('tax_due', 0)
-            new_balance = new_data.get('refund_due', 0) if new_data.get('refund_due', 0) > 0 else -new_data.get('tax_due', 0)
-            
-            print(f"{'Net Refund/Tax Due':<25} {old_color}{old_balance:>12,.0f}{RESET}   {new_color}{new_balance:>12,.0f}{RESET}")
-            print(f"{'Effective Tax Rate':<25} {old_color}{old_data.get('effective_rate', 0):>11.2f}%{RESET}   {new_color}{new_data.get('effective_rate', 0):>11.2f}%{RESET}")
-            
-            print("-" * 55)
-            
-            # Recommendation with color
-            if better_is_old:
-                savings = new_tax - old_tax
-                print(f"{BOLD}{GREEN}RECOMMENDATION: Old Regime saves Rs {savings:,.0f}{RESET}")
-            elif new_tax < old_tax:
-                savings = old_tax - new_tax
-                print(f"{BOLD}{GREEN}RECOMMENDATION: New Regime saves Rs {savings:,.0f}{RESET}")
-            else:
-                print(f"{BOLD}Both regimes result in same tax liability{RESET}")
-                
-        else:
-            # Single regime display
-            for regime_key, regime_data in regime_comparison.items():
-                regime_name = "OLD REGIME" if regime_key == 'old_regime' else "NEW REGIME"
-                print(f"\n{regime_name}")
-                print("-" * 30)
-                print(f"Taxable Income     : Rs {regime_data['taxable_income']:,.0f}")
-                print(f"Tax Liability      : Rs {regime_data['tax_liability']:,.0f}")
-                print(f"TDS Paid          : Rs {regime_data['tds_paid']:,.0f}")
-                
-                if regime_data['refund_due'] > 0:
-                    print(f"Refund Due        : Rs {regime_data['refund_due']:,.0f}")
-                else:
-                    print(f"Additional Tax Due: Rs {regime_data['tax_due']:,.0f}")
-                
-                print(f"Effective Tax Rate: {regime_data['effective_rate']:.2f}%")
+        renderer = SummaryDisplayRenderer()
+        summary_output = renderer.render_complete_summary(tax_results)
+        print(summary_output)
     
     def _display_detailed_tax_breakdown(self, tax_results, regime_choice):
-        """Display detailed tax breakdown with all components."""
+        """Display detailed tax breakdown using modular templates."""
+        from form16_extractor.display import DetailedDisplayRenderer
         
-        employee_info = tax_results['employee_info']
-        financial_data = tax_results['financial_data']
-        regime_comparison = tax_results['regime_comparison']
-        
-        # ANSI color codes
-        GREEN = '\033[92m'
-        RED = '\033[91m'
-        BOLD = '\033[1m'
-        RESET = '\033[0m'
-        
-        print("\nDETAILED TAX ANALYSIS")
-        print("=" * 60)
-        print(f"Employee        : {employee_info['name']}")
-        print(f"PAN             : {employee_info['pan']}")
-        print(f"Employer        : {employee_info['employer']}")
-        print(f"Assessment Year : 2024-25")
-        
-        print(f"\nINCOME BREAKDOWN")
-        print("-" * 40)
-        section_17_1 = financial_data.get('section_17_1_salary', 0)
-        section_17_2 = financial_data.get('section_17_2_perquisites', 0)
-        total_taxable = financial_data.get('gross_salary', 0)
-        
-        print(f"Gross Salary           : Rs {section_17_1:,.0f}")
-        if section_17_2 > 0:
-            print(f"Perquisites (17(2))    : Rs {section_17_2:,.0f}")
-            print(f"Total Taxable Salary (Gross + Perquisites): Rs {total_taxable:,.0f}")
-        else:
-            print(f"Total Taxable Salary   : Rs {total_taxable:,.0f}")
-        print(f"Section 80C Deductions : Rs {financial_data['section_80c']:,.0f}")
-        print(f"Section 80CCD(1B)      : Rs {financial_data['section_80ccd_1b']:,.0f}")
-        print(f"Total TDS Deducted     : Rs {financial_data['total_tds']:,.0f}")
-        
-        print(f"\nDETAILED REGIME COMPARISON")
-        print("=" * 60)
-        
-        # Determine which regime is better for coloring
-        if len(regime_comparison) == 2:
-            old_tax = regime_comparison['old_regime']['tax_liability']
-            new_tax = regime_comparison['new_regime']['tax_liability']
-            better_is_old = old_tax < new_tax
-        else:
-            better_is_old = False
-        
-        # Display detailed breakdown for each regime with color coding
-        for regime_key, regime_data in regime_comparison.items():
-            is_old_regime = regime_key == 'old_regime'
-            regime_name = "OLD TAX REGIME" if is_old_regime else "NEW TAX REGIME"
-            
-            # Choose color based on which regime is better
-            if len(regime_comparison) == 2:
-                color = GREEN if (is_old_regime and better_is_old) or (not is_old_regime and not better_is_old) else RED
-            else:
-                color = ""
-            
-            print(f"\n{color}{BOLD}{regime_name}{RESET}")
-            print(f"{color}{'-' * 30}{RESET}")
-            print(f"{color}Taxable Income    : Rs {regime_data['taxable_income']:,.0f}{RESET}")
-            print(f"{color}Tax Liability     : Rs {regime_data['tax_liability']:,.0f}{RESET}")
-            print(f"{color}TDS Already Paid  : Rs {regime_data['tds_paid']:,.0f}{RESET}")
-            
-            # Show deductions used
-            deductions = regime_data['deductions_used']
-            if any(v > 0 for v in deductions.values()):
-                print(f"{color}Deductions Utilized:{RESET}")
-                for section, amount in deductions.items():
-                    if amount > 0:
-                        print(f"{color}  Section {section:<8} : Rs {amount:,.0f}{RESET}")
-            
-            if regime_data['refund_due'] > 0:
-                print(f"{color}Refund Due        : Rs {regime_data['refund_due']:,.0f}{RESET}")
-            else:
-                print(f"{color}Additional Tax Due: Rs {regime_data['tax_due']:,.0f}{RESET}")
-            
-            print(f"{color}Effective Tax Rate: {regime_data['effective_rate']:.2f}%{RESET}")
-        
-        # Overall comparison summary
-        if len(regime_comparison) == 2:
-            print(f"\n{BOLD}COMPARISON SUMMARY{RESET}")
-            print(f"{BOLD}{'-' * 30}{RESET}")
-            
-            if better_is_old:
-                savings = new_tax - old_tax
-                print(f"{BOLD}{GREEN}Old Regime is better by Rs {savings:,.0f}{RESET}")
-            elif new_tax < old_tax:
-                savings = old_tax - new_tax
-                print(f"{BOLD}{GREEN}New Regime is better by Rs {savings:,.0f}{RESET}")
-            else:
-                print(f"{BOLD}Both regimes result in same tax liability{RESET}")
+        renderer = DetailedDisplayRenderer()
+        detailed_output = renderer.render_complete_detailed(tax_results)
+        print(detailed_output)
         
     def _display_tax_results(self, tax_results, regime_choice):
-        """Display comprehensive tax calculation results in the requested format."""
+        """Display comprehensive tax calculation results using modular templates."""
+        from form16_extractor.display import DefaultDisplayRenderer
         
-        extraction_data = tax_results['extraction_data']
-        
-        # Display extracted Form16 data
-        print(" Form16 Data Extracted:")
-        print("")
-        print(f"- Employee: {extraction_data['employee_name']} (PAN: {extraction_data['employee_pan']})")
-        print(f"- Employer: {extraction_data['employer_name']}")
-        gross_display = f"₹{extraction_data['gross_salary']:,.0f}"
-        if extraction_data['perquisites'] > 0:
-            gross_display += f" (₹{extraction_data['section_17_1']:,.0f} + ₹{extraction_data['perquisites']:,.0f} perquisites)"
-        print(f"- Gross Salary: {gross_display}")
-        
-        if extraction_data['section_80c'] > 0:
-            print(f"- Section 80C (PPF): ₹{extraction_data['section_80c']:,.0f}")
-        if extraction_data['section_80ccd_1b'] > 0:
-            print(f"- Section 80CCD(1B): ₹{extraction_data['section_80ccd_1b']:,.0f}")
-        print(f"- Total TDS Deducted: ₹{extraction_data['total_tds']:,.0f} (across 4 quarters)")
-        
-        print("")
-        print("💰 Comprehensive Tax Calculation Results:")
-        print("")
-        
-        # Display regime results
-        if regime_choice == "both" and 'old' in tax_results and 'new' in tax_results:
-            # Show both regimes
-            for regime_name in ['new', 'old']:
-                if regime_name in tax_results:
-                    data = tax_results[regime_name]
-                    regime_display = f"{regime_name.title()} Regime"
-                    print(f"{regime_display}:")
-                    print(f"- Taxable Income: ₹{data['taxable_income']:,.0f} (after exemptions & deductions)")
-                    print(f"- Tax Liability: ₹{data['tax_liability']:,.0f} (including cess)")
-                    print(f"- TDS Paid: ₹{data['tds_paid']:,.0f}")
-                    
-                    balance_emoji = "🟢" if data['status'] == 'refund_due' else "🔴"
-                    balance_text = "Refund Due" if data['status'] == 'refund_due' else "Additional Tax Payable"
-                    print(f"- {balance_emoji} {balance_text}: ₹{abs(data['balance']):,.0f}")
-                    print(f"- Effective Tax Rate: {data['effective_tax_rate']:.2f}%")
-                    print("")
-            
-            # Show recommendation
-            old_tax = tax_results['old']['tax_liability']
-            new_tax = tax_results['new']['tax_liability']
-            if old_tax < new_tax:
-                savings = new_tax - old_tax
-                print(f" Recommendation: Old Regime saves ₹{savings:,.0f} in taxes")
-            elif new_tax < old_tax:
-                savings = old_tax - new_tax
-                print(f" Recommendation: New Regime saves ₹{savings:,.0f} in taxes")
-            else:
-                print(" Both regimes result in the same tax liability")
-        
-        else:
-            # Show single regime
-            regime_name = 'new' if 'new' in tax_results else 'old'
-            if regime_name in tax_results:
-                data = tax_results[regime_name]
-                regime_display = f"{regime_name.title()} Regime"
-                print(f"{regime_display}:")
-                print(f"- Taxable Income: ₹{data['taxable_income']:,.0f} (after exemptions & deductions)")
-                print(f"- Tax Liability: ₹{data['tax_liability']:,.0f} (including cess)")
-                print(f"- TDS Paid: ₹{data['tds_paid']:,.0f}")
-                
-                balance_emoji = "🟢" if data['status'] == 'refund_due' else "🔴"
-                balance_text = "Refund Due" if data['status'] == 'refund_due' else "Additional Tax Payable"
-                print(f"- {balance_emoji} {balance_text}: ₹{abs(data['balance']):,.0f}")
-                print(f"- Effective Tax Rate: {data['effective_tax_rate']:.2f}%")
-        
-        print("")
+        renderer = DefaultDisplayRenderer()
+        default_output = renderer.render_complete_default(tax_results, regime_choice)
+        print(default_output)
     
     def consolidate_form16s(self, args) -> int:
         """Consolidate multiple Form16s with financial year validation."""
@@ -1128,7 +891,7 @@ Examples:
                 print(f"Error: At least 2 Form16 files required for consolidation")
                 return 1
             
-            print(f"🔗 Consolidating {len(form16_files)} Form16 files...")
+            print(f"Consolidating {len(form16_files)} Form16 files...")
             
             # Validate all files exist
             for file_path in form16_files:
@@ -1196,13 +959,13 @@ Examples:
             duplicate_employers = set([emp for emp in employers if employers.count(emp) > 1])
             
             if duplicate_employers:
-                print(f"\n⚠️  WARNING: Duplicate employers detected:")
+                print(f"\nWARNING: Duplicate employers detected:")
                 for emp in duplicate_employers:
                     print(f"├── {emp}")
                 print(f"└── Please verify these are for the same financial year")
             
             # Consolidate the data
-            print(f"\n💼 Building consolidated Form16...")
+            print(f"\nBuilding consolidated Form16...")
             
             consolidated_result = self._build_consolidated_form16(extracted_forms, common_fy)
             
@@ -1216,7 +979,7 @@ Examples:
                     consolidated_result['consolidated_tax_calculations'] = consolidated_tax
                     
                     print(f"\n" + "="*80)
-                    print(f"💰 CONSOLIDATED TAX CALCULATION RESULTS") 
+                    print(f"CONSOLIDATED TAX CALCULATION RESULTS") 
                     print(f"="*80)
                     self._display_consolidated_tax_results(consolidated_tax, args.tax_regime)
                 else:
@@ -1245,7 +1008,7 @@ Examples:
         """Extract financial year information from Form16."""
         
         # Try to extract from the form16_result structure
-        # This is a best-effort approach since financial year extraction
+        # Financial year extraction with fallback to filename analysis
         # might not be perfect in all cases
         
         # Default values (assuming current assessment year 2024-25)
@@ -1367,7 +1130,7 @@ Examples:
             estimated_taxable_income = total_gross - Decimal('50000')  # Standard deduction
             estimated_taxable_income -= Decimal('200000')  # Assume standard Chapter VI-A deductions
             
-            # Simple tax calculation for consolidated income
+            # Calculate tax liability for consolidated income
             if estimated_taxable_income > 0:
                 # Use new regime calculation as default
                 tax_liability = self._calculate_simple_tax(estimated_taxable_income)
@@ -1398,7 +1161,7 @@ Examples:
             return None
     
     def _calculate_simple_tax(self, taxable_income):
-        """Simple tax calculation for consolidated income."""
+        """Calculate tax liability for consolidated income using current tax slabs."""
         from decimal import Decimal
         
         # New regime AY 2024-25 slabs
@@ -1445,19 +1208,19 @@ Examples:
         
         print(f" Consolidated Form16 Summary:")
         print(f"├── Total Employers: {summary['total_employers']}")
-        print(f"├── Combined Gross Salary: ₹{summary['total_gross_salary']:,}")
-        print(f"├── Combined TDS Deducted: ₹{summary['total_tds_deducted']:,}")
-        print(f"└── Estimated Taxable Income: ₹{summary['estimated_taxable_income']:,}")
+        print(f"├── Combined Gross Salary: Rs {summary['total_gross_salary']:,}")
+        print(f"├── Combined TDS Deducted: Rs {summary['total_tds_deducted']:,}")
+        print(f"└── Estimated Taxable Income: Rs {summary['estimated_taxable_income']:,}")
         
-        print(f"\n💰 Consolidated Tax Calculation:")
-        print(f"├── Estimated Tax Liability: ₹{summary['estimated_tax_liability']:,}")
-        print(f"├── Total TDS Paid: ₹{summary['total_tds_deducted']:,}")
+        print(f"\nConsolidated Tax Calculation:")
+        print(f"├── Estimated Tax Liability: Rs {summary['estimated_tax_liability']:,}")
+        print(f"├── Total TDS Paid: Rs {summary['total_tds_deducted']:,}")
         
-        balance_emoji = "🟢" if summary['status'] == 'refund_due' else "🔴"
+        balance_indicator = "[REFUND]" if summary['status'] == 'refund_due' else "[PAYABLE]"
         balance_text = "Estimated Refund Due" if summary['status'] == 'refund_due' else "Additional Tax Payable"
-        print(f"└── {balance_emoji} {balance_text}: ₹{abs(summary['balance']):,}")
+        print(f"└── {balance_indicator} {balance_text}: Rs {abs(summary['balance']):,}")
         
-        print(f"\n📋 Note: {summary['note']}")
+        print(f"\nNote: {summary['note']}")
         print(f" For accurate calculation, consult a tax professional with detailed Form16s")
     
     def main(self):
@@ -1541,112 +1304,12 @@ Examples:
     
     
     def _display_colored_regime_components(self, tax_results, regime_choice):
-        """Display regime components with colored backgrounds based on best regime."""
+        """Display regime components using modular colored templates."""
+        from form16_extractor.display import ColoredDisplayRenderer
         
-        # ANSI color codes for backgrounds
-        GREEN_BG = '\033[42m'  # Green background
-        RED_BG = '\033[41m'    # Red background  
-        WHITE_TEXT = '\033[97m'  # White text
-        BOLD = '\033[1m'       # Bold text
-        RESET = '\033[0m'      # Reset formatting
-        
-        # Determine which regime is better
-        old_regime = tax_results.get('regime_comparison', {}).get('old_regime', {})
-        new_regime = tax_results.get('regime_comparison', {}).get('new_regime', {})
-        
-        old_tax = old_regime.get('total_tax_liability', float('inf'))
-        new_tax = new_regime.get('total_tax_liability', float('inf'))
-        
-        better_regime = 'old' if old_tax < new_tax else 'new'
-        savings = abs(old_tax - new_tax)
-        
-        # Display header
-        print(f"\n{BOLD}TAX REGIME COMPARISON - COMPONENT VIEW{RESET}")
-        print(f"{'='*70}")
-        
-        # Display employee info
-        employee_info = tax_results.get('employee_info', {})
-        print(f"Employee: {employee_info.get('name', 'N/A')} (PAN: {employee_info.get('pan', 'N/A')})")
-        print(f"Employer: {employee_info.get('employer', 'N/A')}")
-        print()
-        
-        # Get financial data for components
-        financial_data = tax_results.get('financial_data', {})
-        section_17_1 = financial_data.get('section_17_1_salary', 0)
-        section_17_2 = financial_data.get('section_17_2_perquisites', 0) 
-        section_80c = financial_data.get('section_80c', 0)
-        section_80ccd_1b = financial_data.get('section_80ccd_1b', 0)
-        total_tds = financial_data.get('total_tds', 0)
-        
-        # Income Components (same for both regimes)
-        print(f"{BOLD}INCOME COMPONENTS{RESET}")
-        print(f"┌─{'─'*45}─┐")
-        print(f"│ Section 17(1) Salary:     ₹{section_17_1:>12,.0f} │")
-        print(f"│ Section 17(2) Perquisites: ₹{section_17_2:>11,.0f} │")
-        print(f"│ {'─'*45} │")
-        print(f"│ Total Gross Salary:       ₹{section_17_1 + section_17_2:>12,.0f} │")
-        print(f"└─{'─'*45}─┘")
-        print()
-        
-        # Regime-specific components side by side
-        print(f"{BOLD}REGIME COMPARISON{RESET}")
-        
-        # Color backgrounds based on better regime
-        old_bg = f"{GREEN_BG}{WHITE_TEXT}{BOLD}" if better_regime == 'old' else f"{RED_BG}{WHITE_TEXT}{BOLD}"
-        new_bg = f"{GREEN_BG}{WHITE_TEXT}{BOLD}" if better_regime == 'new' else f"{RED_BG}{WHITE_TEXT}{BOLD}"
-        
-        # Old Regime Column
-        print(f"┌─{'─'*30}─┬─{'─'*30}─┐")
-        print(f"│{old_bg}     OLD REGIME (2024-25)     {RESET}│{new_bg}     NEW REGIME (2024-25)     {RESET}│")
-        print(f"├─{'─'*30}─┼─{'─'*30}─┤")
-        
-        # Deductions row
-        old_section_80c = section_80c if old_regime else 0
-        new_section_80c = 0  # New regime doesn't allow 80C
-        
-        print(f"│ Section 80C:  ₹{old_section_80c:>10,.0f} │ Section 80C:  ₹{new_section_80c:>10,.0f} │")
-        print(f"│ Section 80CCD(1B): ₹{section_80ccd_1b:>7,.0f} │ Section 80CCD(1B): ₹{section_80ccd_1b:>7,.0f} │")
-        print(f"│ Standard Deduction: ₹{50000:>8,.0f} │ Standard Deduction: ₹{50000:>8,.0f} │")
-        print(f"├─{'─'*30}─┼─{'─'*30}─┤")
-        
-        # Tax calculation
-        old_taxable = max(0, section_17_1 + section_17_2 - old_section_80c - section_80ccd_1b - 50000)
-        new_taxable = max(0, section_17_1 + section_17_2 - 50000)  # New regime higher standard deduction
-        
-        print(f"│ Taxable Income: ₹{old_taxable:>11,.0f} │ Taxable Income: ₹{new_taxable:>11,.0f} │")
-        print(f"│ Tax Liability:  ₹{old_tax:>11,.0f} │ Tax Liability:  ₹{new_tax:>11,.0f} │")
-        print(f"│ TDS Paid:       ₹{total_tds:>11,.0f} │ TDS Paid:       ₹{total_tds:>11,.0f} │")
-        
-        # Refund/Due calculation
-        old_refund_due = max(0, total_tds - old_tax)
-        old_tax_due = max(0, old_tax - total_tds)
-        new_refund_due = max(0, total_tds - new_tax)
-        new_tax_due = max(0, new_tax - total_tds)
-        
-        print(f"├─{'─'*30}─┼─{'─'*30}─┤")
-        if old_refund_due > 0:
-            print(f"│ Refund Due:     ₹{old_refund_due:>11,.0f} │", end="")
-        else:
-            print(f"│ Tax Due:        ₹{old_tax_due:>11,.0f} │", end="")
-            
-        if new_refund_due > 0:
-            print(f" Refund Due:     ₹{new_refund_due:>11,.0f} │")
-        else:
-            print(f" Tax Due:        ₹{new_tax_due:>11,.0f} │")
-            
-        print(f"└─{'─'*30}─┴─{'─'*30}─┘")
-        
-        # Recommendation
-        print(f"\n{BOLD}RECOMMENDATION:{RESET}")
-        if better_regime == 'old':
-            print(f"{GREEN_BG}{WHITE_TEXT}{BOLD} OLD REGIME IS BETTER {RESET} - Save ₹{savings:,.0f}")
-        else:
-            print(f"{GREEN_BG}{WHITE_TEXT}{BOLD} NEW REGIME IS BETTER {RESET} - Save ₹{savings:,.0f}")
-        
-        print(f"\n{BOLD}Legend:{RESET}")
-        print(f"{GREEN_BG}{WHITE_TEXT} BETTER REGIME {RESET} - Lower tax liability")
-        print(f"{RED_BG}{WHITE_TEXT} COSTLIER REGIME {RESET} - Higher tax liability")
-        print()
+        renderer = ColoredDisplayRenderer()
+        colored_output = renderer.render_complete_display(tax_results)
+        print(colored_output)
     
     # Removed old placeholder methods - now using working Form16TaxIntegrator!
 
