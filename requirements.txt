@@ -19,6 +19,7 @@ python-dateutil>=2.8.0    # Date parsing and handling
 # Logging and monitoring
 structlog>=23.0.0         # Structured logging
 python-json-logger>=2.0.0 # JSON logging format
+rich>=13.0.0              # Beautiful terminal output and progress bars
 
 # Optional: ML-based text extraction (for future enhancement)
 spacy>=3.6.0              # NLP for text understanding

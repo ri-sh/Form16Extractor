@@ -309,7 +309,7 @@ class DefaultDisplayRenderer:
     def render_extraction_summary(self, extraction_data: Dict[str, Any]) -> str:
         """Render extracted Form16 data summary."""
         output = [
-            "✓ Form16 Data Extracted:",
+            "Form16 Data Extracted:",
             "",
             f"- Employee: {extraction_data.get('employee_name', 'N/A')} (PAN: {extraction_data.get('employee_pan', 'N/A')})",
             f"- Employer: {extraction_data.get('employer_name', 'N/A')}"
@@ -372,11 +372,11 @@ class DefaultDisplayRenderer:
             better_regime, savings = DisplayTemplates.determine_better_regime(old_tax, new_tax)
             
             if better_regime == 'old':
-                output.append(f"✓ Recommendation: Old Regime saves ₹{savings:,.0f} in taxes")
+                output.append(f"Recommendation: Old Regime saves ₹{savings:,.0f} in taxes")
             elif better_regime == 'new':
-                output.append(f"✓ Recommendation: New Regime saves ₹{savings:,.0f} in taxes")
+                output.append(f"Recommendation: New Regime saves ₹{savings:,.0f} in taxes")
             else:
-                output.append("✓ Both regimes result in the same tax liability")
+                output.append("Both regimes result in the same tax liability")
         
         else:
             # Show single regime

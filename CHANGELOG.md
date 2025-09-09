@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-09-09
+
+### Added
+#### Progress Animation System
+- **Beautiful Terminal Animations**: Complete progress animation system using Rich library for PDF processing operations
+- **Multi-Stage Progress Tracking**: Real-time progress indicators showing "Reading PDF", "Extracting tables", "Classifying tables", "Reading data from table", "Extracting JSON", "Computing tax"
+- **Interactive Progress Bars**: Animated progress bars with percentage completion, time elapsed, and stage descriptions
+- **Status Spinners**: Elegant status spinners for consolidation and validation operations
+- **Graceful Fallback**: Simple text-based progress indicators when Rich library is unavailable or in verbose mode
+- **PDF Processing Stages**: Six distinct processing stages with appropriate progress weighting and visual feedback
+
+#### User Experience Improvements
+- **Professional Progress Feedback**: Users now see exactly what stage of processing is happening in real-time
+- **Non-Blocking Animation**: Progress animations don't interfere with verbose logging or error messages
+- **Consolidation Progress**: Multi-file consolidation now shows per-file progress with animated status indicators
+- **Processing Time Visibility**: Time elapsed is shown during processing for better user awareness
+
+### Technical Implementation
+- **Rich Library Integration**: Added Rich 14.1.0 dependency for advanced terminal output capabilities
+- **Modular Progress Architecture**: Created dedicated `form16_extractor.progress` package with reusable components
+- **Context Manager Pattern**: Progress tracking uses context managers for clean resource management
+- **Fallback Support**: Automatic detection of Rich availability with graceful degradation to simple progress indicators
+- **CLI Integration**: Seamless integration into existing CLI commands without breaking changes
+
 ## [2.0.1] - 2024-09-09
 
 ### Enhanced

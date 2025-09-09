@@ -50,8 +50,8 @@ from form16_extractor.extractors.enhanced_form16_extractor import EnhancedForm16
 from form16_extractor.pdf.reader import RobustPDFProcessor
 from form16_extractor.utils.json_builder import Form16JSONBuilder
 from form16_extractor.models.form16_models import Form16Document
+from form16_extractor.progress import Form16ProgressTracker, Form16ProcessingStages
 from decimal import Decimal
-# from src.domain.models import ExtractionResult
 
 
 class Form16CLI:
@@ -268,47 +268,75 @@ Examples:
             
             start_time = time.time()
             
-            # Extract tables from PDF
-            if args.verbose:
-                print(f"Processing PDF: {input_file}")
+            # Initialize progress tracker
+            progress_tracker = Form16ProgressTracker(enable_animation=not args.verbose)
             
-            extraction_result = self.pdf_processor.extract_tables(input_file)
-            tables = extraction_result.tables
-            
-            if args.verbose:
-                print(f"Extracted {len(tables)} tables from PDF")
-            
-            # Extract Form16 data
-            form16_result = self.extractor.extract_all(tables)
-            processing_time = time.time() - start_time
-            
-            # Use proper Form16 JSON builder for correct Part A/Part B structure
-            result = Form16JSONBuilder.build_comprehensive_json(
-                form16_doc=form16_result,
-                pdf_file_name=input_file.name,
-                processing_time=processing_time,
-                extraction_metadata=getattr(form16_result, 'extraction_metadata', {})
-            )
-            
-            # Comprehensive tax calculation if requested
-            if args.calculate_tax:
-                if args.verbose:
-                    print(f"Calculating comprehensive tax liability...")
+            # Process PDF with animated progress
+            with progress_tracker.processing_pipeline(input_file.name) as progress:
+                # Stage 1: Reading PDF
+                progress.advance_stage(Form16ProcessingStages.READING_PDF)
+                time.sleep(2.0)  # Display for 2 seconds
                 
-                # Use the correct Form16-based tax computation
-                tax_results = self._calculate_form16_based_tax(form16_result, args)
-                if tax_results:
-                    result['tax_calculations'] = tax_results
+                # Stage 2: Extract tables from PDF
+                progress.advance_stage(Form16ProcessingStages.EXTRACTING_TABLES)
+                if args.verbose:
+                    print(f"Processing PDF: {input_file}")
+                
+                extraction_result = self.pdf_processor.extract_tables(input_file)
+                tables = extraction_result.tables
+                # No artificial delay - PDF extraction is already slow enough
+                
+                # Stage 3: Classifying tables
+                progress.advance_stage(Form16ProcessingStages.CLASSIFYING_TABLES)
+                if args.verbose:
+                    print(f"Extracted {len(tables)} tables from PDF")
+                time.sleep(2.0)  # Display for 2 seconds
+                
+                # Stage 4: Reading data from tables
+                progress.advance_stage(Form16ProcessingStages.READING_DATA)
+                time.sleep(2.0)  # Display for 2 seconds
+                
+                # Stage 5: Extract Form16 data
+                progress.advance_stage(Form16ProcessingStages.EXTRACTING_JSON)
+                form16_result = self.extractor.extract_all(tables)
+                processing_time = time.time() - start_time
+                
+                # Use proper Form16 JSON builder for correct Part A/Part B structure
+                result = Form16JSONBuilder.build_comprehensive_json(
+                    form16_doc=form16_result,
+                    pdf_file_name=input_file.name,
+                    processing_time=processing_time,
+                    extraction_metadata=getattr(form16_result, 'extraction_metadata', {})
+                )
+                time.sleep(2.0)  # Display for 2 seconds
+                
+                # Stage 6: Tax calculation if requested
+                if args.calculate_tax:
+                    progress.advance_stage(Form16ProcessingStages.COMPUTING_TAX)
+                    if args.verbose:
+                        print(f"Calculating comprehensive tax liability...")
                     
-                    # Always display tax results on terminal when --calculate-tax is used
-                    if hasattr(args, 'display_mode') and args.display_mode == 'colored':
-                        self._display_colored_regime_components(tax_results, args.tax_regime)
-                    elif hasattr(args, 'summary') and args.summary:
-                        self._display_detailed_tax_breakdown(tax_results, args.tax_regime)
+                    # Use the correct Form16-based tax computation
+                    tax_results = self._calculate_form16_based_tax(form16_result, args)
+                    if tax_results:
+                        result['tax_calculations'] = tax_results
                     else:
-                        self._display_tax_summary(tax_results, args.tax_regime)
+                        print(f"Warning: Tax calculation failed - continuing with extraction only")
+                    time.sleep(2.0)  # Display for 2 seconds
+                
+                # Mark as complete
+                progress.complete("Processing complete")
+            
+            # Display tax results after progress is complete
+            if args.calculate_tax and 'tax_calculations' in result:
+                print("\n")  # Add some spacing after progress
+                # Always display tax results on terminal when --calculate-tax is used
+                if hasattr(args, 'display_mode') and args.display_mode == 'colored':
+                    self._display_colored_regime_components(result['tax_calculations'], args.tax_regime)
+                elif hasattr(args, 'summary') and args.summary:
+                    self._display_detailed_tax_breakdown(result['tax_calculations'], args.tax_regime)
                 else:
-                    print(f"Warning: Tax calculation failed - continuing with extraction only")
+                    self._display_tax_summary(result['tax_calculations'], args.tax_regime)
             
             # Save result with proper formatting (only if output specified)
             if args.output or args.out_dir:
@@ -891,36 +919,41 @@ Examples:
                 print(f"Error: At least 2 Form16 files required for consolidation")
                 return 1
             
-            print(f"Consolidating {len(form16_files)} Form16 files...")
+            # Initialize progress tracker for consolidation
+            progress_tracker = Form16ProgressTracker(enable_animation=not args.verbose)
             
-            # Validate all files exist
-            for file_path in form16_files:
-                if not file_path.exists():
-                    print(f"Error: File not found: {file_path}")
-                    return 1
-                if not file_path.suffix.lower() == '.pdf':
-                    print(f"Error: Only PDF files supported: {file_path}")
-                    return 1
+            with progress_tracker.status_spinner(f"Consolidating {len(form16_files)} Form16 files..."):
+                # Validate all files exist
+                for file_path in form16_files:
+                    if not file_path.exists():
+                        print(f"Error: File not found: {file_path}")
+                        return 1
+                    if not file_path.suffix.lower() == '.pdf':
+                        print(f"Error: Only PDF files supported: {file_path}")
+                        return 1
             
-            # Extract data from all Form16s
+            # Extract data from all Form16s with progress
             extracted_forms = []
             financial_years = set()
             
-            print(f"\n Extracting data from Form16s...")
+            print(f"\nExtracting data from {len(form16_files)} Form16 files...")
+            
             for i, form16_file in enumerate(form16_files, 1):
-                print(f"[{i}/{len(form16_files)}] Processing: {form16_file.name}")
-                
-                # Extract tables and Form16 data
-                extraction_result = self.pdf_processor.extract_tables(form16_file)
-                form16_result = self.extractor.extract_all(extraction_result.tables)
-                
-                # Build comprehensive JSON
-                form16_json = Form16JSONBuilder.build_comprehensive_json(
-                    form16_doc=form16_result,
-                    pdf_file_name=form16_file.name,
-                    processing_time=0,  # Not tracking individual processing time for consolidation
-                    extraction_metadata=getattr(form16_result, 'extraction_metadata', {})
-                )
+                with progress_tracker.status_spinner(f"Processing {form16_file.name} ({i}/{len(form16_files)})"):
+                    if args.verbose:
+                        print(f"[{i}/{len(form16_files)}] Processing: {form16_file.name}")
+                    
+                    # Extract tables and Form16 data
+                    extraction_result = self.pdf_processor.extract_tables(form16_file)
+                    form16_result = self.extractor.extract_all(extraction_result.tables)
+                    
+                    # Build comprehensive JSON
+                    form16_json = Form16JSONBuilder.build_comprehensive_json(
+                        form16_doc=form16_result,
+                        pdf_file_name=form16_file.name,
+                        processing_time=0,  # Not tracking individual processing time for consolidation
+                        extraction_metadata=getattr(form16_result, 'extraction_metadata', {})
+                    )
                 
                 # Extract financial year information
                 fy_info = self._extract_financial_year_info(form16_result, form16_file)
