@@ -55,16 +55,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**: Full API documentation and examples
 
 ### Supported Form16 Features
-- ✅ Employee identification (Name, PAN, Employee ID)
-- ✅ Employer identification (Name, TAN, PAN, Address)
-- ✅ Salary components (Basic, HRA, Special Allowance, etc.)
-- ✅ Perquisites under Section 17(2)
-- ✅ Exemptions under Section 10
-- ✅ Standard deduction and professional tax
-- ✅ Chapter VI-A deductions (80C, 80D, 80E, 80G, etc.)
-- ✅ Quarterly TDS breakdown with challan details
-- ✅ Tax computation with surcharge and cess
-- ✅ Refund/tax payable calculations
+- Employee identification (Name, PAN, Employee ID)
+- Employer identification (Name, TAN, PAN, Address)
+- Salary components (Basic, HRA, Special Allowance, etc.)
+- Perquisites under Section 17(2)
+- Exemptions under Section 10
+- Standard deduction and professional tax
+- Chapter VI-A deductions (80C, 80D, 80E, 80G, etc.)
+- Quarterly TDS breakdown with challan details
+- Tax computation with surcharge and cess
+- Refund/tax payable calculations
 
 ### Known Limitations
 - Requires Form16 PDFs to be text-extractable (not scanned images)

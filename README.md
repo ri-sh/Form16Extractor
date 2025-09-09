@@ -125,14 +125,14 @@ The extractor returns comprehensive structured data in JSON format:
       },
       "employer": {
         "name": "TECH SOLUTIONS INDIA PRIVATE LIMITED",
-        "address": "IT Park, Tower A, 3rd Floor, Business District, MUMBAI - 400001, Maharashtra, +91-22-12345678",
-        "tan": "ABCD12345E",
-        "pan": "ABCDE1234F"
+        "address": "IT Park, Tower A, 3rd Floor, Business District, Example City - 100001, , +91-99-12345678",
+        "tan": "TEST12345E",
+        "pan": "TEST12345F"
       },
       "employee": {
-        "name": "JOHN SMITH",
-        "pan": "BYHPR1234P",
-        "address": "123 Main Street, Andheri East, MUMBAI - 400069, Maharashtra",
+        "name": "Test User",
+        "pan": "TEST56789P",
+        "address": "123 Main Street, Andheri East, Example City - 100001, ",
         "employee_reference_number": "EMP001234"
       },
       "quarterly_tds_summary": {

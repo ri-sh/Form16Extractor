@@ -1,18 +1,18 @@
 # Contributing to Form16 Extractor
 
-First off, thanks for considering contributing! 🎉 
+Thank you for considering contributing. 
 
 The Form16 Extractor project aims to make working with Indian tax documents easier for developers, and community contributions are what make it better.
 
-## 🤝 Ways to Contribute
+## Ways to Contribute
 
-- **Bug Reports**: Found something broken? Let us know!
-- **Feature Requests**: Have an idea for improvement? We'd love to hear it.
+- **Bug Reports**: Found something broken? Let us know.
+- **Feature Requests**: Have an idea for improvement? We would appreciate your feedback.
 - **Code Contributions**: Fix bugs, add features, improve performance.
 - **Documentation**: Help make our docs clearer and more comprehensive.
 - **Testing**: Help test on different Form16 formats and edge cases.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Development Setup
 
@@ -45,7 +45,7 @@ The Form16 Extractor project aims to make working with Indian tax documents easi
    flake8 .
    ```
 
-## 🧪 Running Tests
+## Running Tests
 
 We use pytest for testing:
 
@@ -66,7 +66,7 @@ python -m pytest tests/unit/extractors/domains/identity/
 python -m pytest tests/unit/extractors/domains/salary/
 ```
 
-## 📝 Code Style
+## Code Style Code Style
 
 We use several tools to maintain code quality:
 
@@ -119,7 +119,7 @@ Add any other context about the problem here.
 
 **Important**: Never include actual personal data (PAN, names, addresses) in bug reports. Use anonymized/sample data instead.
 
-## 💡 Feature Requests
+## Feature Requests Feature Requests
 
 We love new ideas! When suggesting features:
 
@@ -196,7 +196,7 @@ Brief description of changes.
 - [ ] No personal/sensitive data in code or tests
 ```
 
-## 🧑‍💻 Development Guidelines
+## Development Guidelines Development Guidelines
 
 ### Code Organization
 
@@ -235,7 +235,7 @@ form16_extractor/
 - **Local processing only** - no network calls
 - **Secure file handling** - proper cleanup of temporary files
 
-## 📋 Types of Contributions We Need
+## Types of Contributions Types of Contributions We Need
 
 ### High Priority
 - **Support for new Form16 formats** - different employers use different layouts
@@ -255,7 +255,7 @@ form16_extractor/
 - **Error scenario docs** - how to handle common issues
 - **Integration guides** - using with popular frameworks
 
-## 🎯 Coding Standards
+## Coding Standards Coding Standards
 
 ### Python Style
 - Follow **PEP 8**
@@ -275,14 +275,14 @@ form16_extractor/
 - **One assertion per test** (generally)
 - **Test both happy path and edge cases**
 
-## 🏆 Recognition
+## Recognition
 
 Contributors get:
 - **Credit** in CHANGELOG.md and README.md
 - **GitHub contributor badge**
 - **Thanks** in release notes for significant contributions
 
-## 📞 Getting Help
+## Getting Help
 
 Stuck? Need clarification? Here's how to get help:
 
@@ -290,10 +290,10 @@ Stuck? Need clarification? Here's how to get help:
 - **GitHub Issues** - for bugs and feature requests  
 - **Code Review** - we'll help make your PR better
 
-## 🎉 Thank You!
+## Thank You
 
 Every contribution makes the Form16 Extractor better for the entire Indian developer community. Whether it's fixing a typo or adding major features, your help is appreciated! 
 
 ---
 
-*Happy coding! 🚀*
+*Happy coding.*

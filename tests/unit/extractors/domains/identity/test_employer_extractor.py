@@ -20,9 +20,9 @@ class TestEmployerExtractor:
         # Sample table with employer info (Part A format)
         self.sample_employer_table = pd.DataFrame([
             ["", "", "", "", "", "", "", "Name and address of the Employer/Specified Bank", "", "", "", "", "", "", "", "", "Name and address of the Employee"],
-            ["", "", "", "", "", "", "", "TEST TECH COMPANY LIMITED\nTest Building, 5th Floor,\nTest Business Park, TEST CITY - 100001\nTest State\n+(91)91-1234567890\nhr-payroll@testcompany.com", "", "", "", "", "", "", "", "", "JOHN DOE\n123 Test Street, Test City - 100001"],
+            ["", "", "", "", "", "", "", "TEST TECH COMPANY LIMITED\nTest Building, 5th Floor,\nTest Business Park, TEST CITY - 100001\nTest State\n+91-99-12345678\nhr@example.com", "", "", "", "", "", "", "", "", "Test User\n123 Test Street, Test City - 100001"],
             ["", "", "PAN of the Deductor", "", "", "", "", "TAN of the Deductor", "", "", "PAN of the Employee", "", "", "", "", "", "Employee Reference No."],
-            ["", "", "ABCDE1919K", "", "", "", "", "TEST25952D", "", "", "ABCDE1234F", "", "", "", "", "", "TEST001"]
+            ["", "", "TEST11919K", "", "", "", "", "TEST25952D", "", "", "TEST12345F", "", "", "", "", "", "TEST001"]
         ])
         
         # Another format with key-value pairs

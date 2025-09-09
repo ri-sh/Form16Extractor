@@ -153,3 +153,32 @@ integration_tests/
 *test_*.py
 !tests/unit/**
 !tests/integration/**
+
+# Integration and demo test files - never commit
+test_simple_comprehensive_tax_demo.py
+test_comprehensive_tax_calculation.py
+test_integrated_comprehensive_calculator.py
+test_real_form16_comprehensive_tax.py
+test_new_features.py
+test_multi_company.py
+test_year_specific_rules.py
+test_real_consolidation.py
+test_tax_calc_simple.py
+verify_enhanced_extractor_output.py
+create_expected_outputs.py
+find_esop_content.py
+
+# Analysis and debug files - archived
+comprehensive_tax_calculation_gaps_analysis.md
+verify_tax_calculation.py
+fix_core_tax_extraction.py
+deep_form16_analysis.py
+fix_form16_actual_values.py
+fix_tax_calculation_logic.py
+test_real_form16_comprehensive_tax_calculation.py
+find_real_issue.py
+validate_tax_computation_accuracy.py
+test_correct_computation.py
+fin_real_*.py
+comprehensive*.md
+fix_*.py
