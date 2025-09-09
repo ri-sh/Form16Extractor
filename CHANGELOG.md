@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2024-09-09
+
+### Enhanced
+#### Display & User Experience
+- **Improved Colored Display Mode**: Complete overhaul of the colored terminal display for tax regime comparison
+- **Perfect Box Alignment**: All tax calculation boxes now have consistent 4-space indentation and perfect vertical line alignment
+- **Clean Visual Formatting**: Removed redundant headers, fixed box width consistency, and improved horizontal separators
+- **Professional Layout**: All headers (EMPLOYEE DETAILS, INCOME BREAKDOWN, REGIME COMPARISON ANALYSIS, SUMMARY METRICS) now align consistently
+- **Income Breakdown Box**: Corrected spacing and alignment for perquisites display
+- **Box Drawing Characters**: Standardized all box drawing with proper Unicode characters and consistent styling
+- **Template Modularization**: Extracted display templates into separate files for better code organization and maintainability
+
+#### Bug Fixes
+- **Vertical Line Alignment**: Fixed misaligned vertical borders in tax regime comparison boxes
+- **Currency Symbol Formatting**: Standardized ₹ symbol positioning and right-alignment of monetary values
+- **Header Spacing**: Corrected double-indentation issues in employee details and summary sections
+- **Box Width Consistency**: Ensured all boxes have uniform width (49 characters) for professional appearance
+
+### Technical Improvements
+- **Template Architecture**: Refactored colored display into modular template system for easier maintenance
+- **Code Organization**: Separated display logic into dedicated template files (`colored_templates.py`, `display_templates.py`)
+- **Consistent Formatting**: Implemented systematic 4-space indentation throughout the colored display mode
+- **Display Renderer Pattern**: Created structured renderer classes for different display modes
+
 ## [2.0.0] - 2024-09-09
 
 ### Added
