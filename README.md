@@ -8,7 +8,7 @@
 **A privacy-first, open-source tool to parse Indian Form 16 PDFs into structured JSON.**
 *I built this to make my own tax filing easier — sharing it in case it helps others.*
 
-![demo-gif](assets/demo.gif) <!-- replace with your GIF or screenshot -->
+![demo-gif](form16x_demo.gif) 
 
 ---
 
