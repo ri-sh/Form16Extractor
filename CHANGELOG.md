@@ -30,6 +30,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Comprehensive Income Mapping**: Complete mapping of Form16 other income fields to tax calculation inputs
 - **Income Source Validation**: Automatic validation and categorization of different income types from Form16
 
+#### User-Friendly CLI Interface (NEW)
+- **Taxedo Command**: Introduced standalone `taxedo` CLI tool for easy installation and usage
+- **Simplified Command Format**: New user-friendly format: `taxedo extract json form16.pdf` instead of `--file` flags
+- **Multiple Output Formats**: Direct format specification in command: `taxedo extract csv form16.pdf`
+- **Backward Compatibility**: Legacy `--file` format still fully supported
+- **Professional Installation**: Package installation with `pip install -e .` enables `taxedo` command globally
+
+#### Visual Tax Display System (NEW)
+- **Colorful Visual Analysis**: Rich colored display with winner/loser highlighting for tax regime comparison
+- **Professional Table Format**: Clean tabular display mode perfect for reports and documentation
+- **Smart Display Modes**: `--display-mode colored` (default) and `--display-mode table` options
+- **Tax Regime Visualization**: Visual boxes showing Old vs New regime with clear recommendations
+- **Summary Enhancements**: Detailed summary mode with monthly savings breakdown and effective tax rates
+- **Action-Oriented Output**: Clear recommendations like "Choose NEW REGIME - Save Rs 80,080 annually!"
+- **Currency Formatting**: Professional ₹ symbols and proper number formatting throughout
+
 #### Advanced Tax Calculation Engine
 - **Comprehensive Tax Components**: Full implementation of basic tax, surcharge, health and education cess calculations
 - **Marginal Relief Calculations**: Accurate marginal relief for surcharge calculations at ₹50L and ₹1Cr thresholds  
@@ -50,6 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Seamless API Integration**: CLI now uses the new API internally while maintaining backward compatibility
 - **Enhanced Error Reporting**: Better error messages and validation feedback through improved API error handling
 - **Performance Improvements**: Faster tax calculations through optimized API architecture
+- **User-Friendly Commands**: Simplified command syntax with positional arguments for better user experience
+- **Visual Enhancement**: Rich colored output with professional formatting and clear recommendations
+- **Flexible Output**: Support for both colored visual analysis and clean tabular reports
 
 #### Data Architecture Improvements  
 - **Clean Separation of Concerns**: Business logic properly separated from CLI presentation layer

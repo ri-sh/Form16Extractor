@@ -64,20 +64,23 @@ class Form16CLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  Extract single Form 16:
-    python cli.py extract --file form16.pdf --output result.json
+  Extract to JSON (user-friendly format):
+    taxedo extract json form16.pdf
+    
+  Extract to CSV:
+    taxedo extract csv form16.pdf --output data.csv
+    
+  Extract with tax calculation:
+    taxedo extract json form16.pdf --calculate-tax
 
-  Batch process multiple Form 16s:
-    python cli.py batch --input-dir ./pdfs/ --output-dir ./results/
-
-  Extract with verbose logging:
-    python cli.py extract --file form16.pdf --output result.json --verbose
-
-  Extract specific fields only:
-    python cli.py extract --file form16.pdf --fields employee_info,salary_breakdown
-
-  Validate extraction results:
-    python cli.py validate --file result.json
+  Consolidate multiple employers:
+    taxedo consolidate --files company1.pdf company2.pdf --calculate-tax
+    
+  Extract with bank interest (80TTA/80TTB calculation):
+    taxedo extract json form16.pdf --calculate-tax --bank-interest 25000
+    
+  Legacy format (backward compatibility):
+    taxedo extract --file form16.pdf --output result.json
             """
         )
         
@@ -91,9 +94,19 @@ Examples:
         extract_parser = subparsers.add_parser(
             "extract", help="Extract data from a single Form 16 PDF"
         )
+        # Add positional arguments for user-friendly format: taxedo extract json form16.pdf
         extract_parser.add_argument(
-            "--file", "-f", required=True, type=Path,
+            "format", nargs='?', choices=["json", "csv", "xlsx"], default="json",
+            help="Output format (json, csv, xlsx)"
+        )
+        extract_parser.add_argument(
+            "file", nargs='?', type=Path,
             help="Path to Form 16 PDF file"
+        )
+        # Keep legacy --file option for backward compatibility
+        extract_parser.add_argument(
+            "--file", "-f", type=Path, dest="file_flag",
+            help="Path to Form 16 PDF file (legacy option)"
         )
         extract_parser.add_argument(
             "--output", "-o", type=Path,
@@ -106,10 +119,6 @@ Examples:
         extract_parser.add_argument(
             "--fields", type=str,
             help="Comma-separated list of fields to extract (default: all)"
-        )
-        extract_parser.add_argument(
-            "--format", choices=["json", "csv", "xlsx"], default="json",
-            help="Output format (default: json)"
         )
         extract_parser.add_argument(
             "--pretty", action="store_true",
@@ -257,7 +266,12 @@ Examples:
     def extract_single_file(self, args) -> int:
         """Extract data from a single Form 16 file"""
         try:
-            input_file = args.file
+            # Handle both positional and flag-based file input
+            input_file = args.file if args.file else args.file_flag
+            if not input_file:
+                print("Error: File path is required. Use: taxedo extract json form16.pdf or taxedo extract --file form16.pdf")
+                return 1
+            
             if not input_file.exists():
                 print(f"Error: File not found: {input_file}")
                 return 1
@@ -1671,7 +1685,10 @@ Examples:
     
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the taxedo command."""
     cli = Form16CLI()
-    exit_code = cli.main()
-    sys.exit(exit_code)
+    return cli.main()
+
+if __name__ == "__main__":
+    sys.exit(main())

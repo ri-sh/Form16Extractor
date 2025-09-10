@@ -73,11 +73,14 @@ git clone https://github.com/ri-sh/Form16Extractor.git
 cd Form16Extractor
 pip install -r requirements.txt
 
-# Extract a Form16 
-python cli.py extract --file path/to/Form16.pdf --output result.json
+# Option 1: Install as package for taxedo command (RECOMMENDED)
+pip install -e .
 
-# Extract with tax calculation
-python cli.py extract --file path/to/Form16.pdf --calculate-tax --summary
+# Now use the user-friendly taxedo command
+taxedo extract json path/to/Form16.pdf --calculate-tax
+
+# Option 2: Use directly with Python (legacy)
+python cli.py extract --file path/to/Form16.pdf --output result.json
 ```
 
 **Note:** If you encounter issues with camelot installation, see the [official camelot-py installation guide](https://camelot-py.readthedocs.io/en/master/user/install-deps.html).
@@ -116,6 +119,29 @@ python cli.py extract --file form16_sample.pdf --calculate-tax --other-income 50
 
 # Tax calculation for senior citizens (60-80 years)
 python cli.py extract --file form16_sample.pdf --calculate-tax --age-category senior_60_to_80
+
+# NEW: User-friendly taxedo command (after pip install -e .)
+# Simple extraction to JSON
+taxedo extract json form16_sample.pdf
+
+# Extract with beautiful colored tax regime comparison
+taxedo extract json form16_sample.pdf --calculate-tax --display-mode colored
+
+# Extract with clean table display (good for reports)
+taxedo extract json form16_sample.pdf --calculate-tax --display-mode table
+
+# Extract to CSV format
+taxedo extract csv form16_sample.pdf --output data.csv
+
+# Consolidate multiple employers with tax calculation
+taxedo consolidate --files company1.pdf company2.pdf --calculate-tax
+
+# Extract with bank interest for 80TTA/80TTB deductions
+taxedo extract json form16_sample.pdf --calculate-tax --bank-interest 25000
+
+# Get help and supported assessment years
+taxedo --help
+taxedo info
 
 
 ```

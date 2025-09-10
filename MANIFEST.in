@@ -1,0 +1,24 @@
+# Include package files
+include README.md
+include CHANGELOG.md  
+include LICENSE
+include requirements.txt
+include setup.py
+include taxedo
+
+# Include package data
+recursive-include form16_extractor *.py
+recursive-include form16_extractor *.json
+recursive-include form16_extractor *.txt
+recursive-include form16_extractor *.md
+
+# Include test files
+recursive-include tests *.py
+
+# Exclude compiled files and cache
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
