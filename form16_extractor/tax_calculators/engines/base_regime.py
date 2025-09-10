@@ -85,6 +85,8 @@ class BaseTaxRegime(ITaxRegime, ABC):
             surcharge_rate_2=float(surcharge_config['rate_2']),
             surcharge_threshold_3=Decimal(str(surcharge_config.get('threshold_3', 0))),
             surcharge_rate_3=float(surcharge_config.get('rate_3', 0)),
+            surcharge_threshold_4=Decimal(str(surcharge_config.get('threshold_4', 0))),
+            surcharge_rate_4=float(surcharge_config.get('rate_4', 0)),
             health_education_cess_rate=float(cess_config['health_education_cess_rate']),
             allows_section_80c=self._allows_deduction('section_80c'),
             allows_section_80d=self._allows_deduction('section_80d'),
@@ -149,8 +151,14 @@ class BaseTaxRegime(ITaxRegime, ABC):
             surcharge_rate = settings.surcharge_rate_1
         elif settings.surcharge_threshold_3 and total_income <= settings.surcharge_threshold_3:
             surcharge_rate = settings.surcharge_rate_2
+        elif settings.surcharge_threshold_4 and total_income <= settings.surcharge_threshold_4:
+            surcharge_rate = settings.surcharge_rate_3
         else:
-            surcharge_rate = settings.surcharge_rate_3 or settings.surcharge_rate_2
+            # Use rate_4 for old regime (above 5Cr), or rate_3 for new regime (capped at 25%)
+            if settings.surcharge_rate_4:
+                surcharge_rate = settings.surcharge_rate_4  # Old regime: 37%
+            else:
+                surcharge_rate = settings.surcharge_rate_3 or settings.surcharge_rate_2  # New regime: 25%
         
         surcharge = self._round_currency(
             tax_before_surcharge * Decimal(str(surcharge_rate / 100))

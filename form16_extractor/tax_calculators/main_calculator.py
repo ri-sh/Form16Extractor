@@ -189,6 +189,8 @@ class MultiYearTaxCalculator(ITaxCalculator):
         """Calculate total income from all sources."""
         return (
             input_data.gross_salary + 
+            input_data.bank_interest_income +
+            input_data.dividend_income +
             input_data.other_income + 
             input_data.house_property_income
         )

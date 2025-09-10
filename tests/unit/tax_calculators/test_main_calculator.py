@@ -118,9 +118,10 @@ class TestMultiYearTaxCalculator:
         
         result = self.calculator.calculate_tax(input_data)
         
-        # Super senior citizen gets 5L exemption
-        # So 6L income should have minimal tax
-        assert result.taxable_income <= Decimal('200000')  # After deductions
+        # Super senior citizen gets 5L basic exemption limit (not additional exemption)
+        # So 6L income with standard deduction should result in ~5.5L taxable income
+        assert result.taxable_income >= Decimal('500000')  # 6L - 50K standard deduction = 5.5L
+        assert result.taxable_income <= Decimal('600000')  # Should be reasonable
     
     def test_rebate_87a_new_regime(self):
         """Test Section 87A rebate in new regime."""

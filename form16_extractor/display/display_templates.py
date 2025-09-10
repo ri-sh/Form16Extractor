@@ -53,9 +53,10 @@ class SummaryDisplayRenderer:
         return f"""
 FORM16 SUMMARY
 {'-' * 50}
-Employee    : {employee_info.get('name', 'N/A')}
-PAN         : {employee_info.get('pan', 'N/A')}
-Employer    : {employee_info.get('employer', 'N/A')}"""
+Employee        : {employee_info.get('name', 'N/A')}
+PAN             : {employee_info.get('pan', 'N/A')}
+Employer        : {employee_info.get('employer', 'N/A')}
+Assessment Year : {employee_info.get('assessment_year', 'N/A')}"""
 
     def render_income_summary(self, financial_data: Dict[str, float]) -> str:
         """Render income summary section."""
@@ -185,7 +186,7 @@ DETAILED TAX ANALYSIS
 Employee        : {employee_info.get('name', 'N/A')}
 PAN             : {employee_info.get('pan', 'N/A')}
 Employer        : {employee_info.get('employer', 'N/A')}
-Assessment Year : 2024-25"""
+Assessment Year : {employee_info.get('assessment_year', 'N/A')}"""
 
     def render_income_breakdown(self, financial_data: Dict[str, float]) -> str:
         """Render detailed income breakdown."""

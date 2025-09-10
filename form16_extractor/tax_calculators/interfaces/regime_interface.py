@@ -44,8 +44,10 @@ class RegimeSettings:
     surcharge_rate_1: float         # 10%
     surcharge_threshold_2: Decimal  # 1Cr
     surcharge_rate_2: float         # 15%
-    surcharge_threshold_3: Optional[Decimal] = None  # 2Cr/5Cr
-    surcharge_rate_3: Optional[float] = None         # 25%/37%
+    surcharge_threshold_3: Optional[Decimal] = None  # 2Cr
+    surcharge_rate_3: Optional[float] = None         # 25%
+    surcharge_threshold_4: Optional[Decimal] = None  # 5Cr (old regime only)
+    surcharge_rate_4: Optional[float] = None         # 37% (old regime only)
     
     # Cess
     health_education_cess_rate: float = 4.0

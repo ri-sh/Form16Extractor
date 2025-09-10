@@ -69,5 +69,5 @@ class IConsolidationValidator(ABC):
         consolidated_deductions: Dict[str, float],
         context: ValidationContext
     ) -> ValidationResult:
-        """Validate that deductions don't exceed statutory limits."""
+        """Validate that deductions do not exceed statutory limits."""
         pass

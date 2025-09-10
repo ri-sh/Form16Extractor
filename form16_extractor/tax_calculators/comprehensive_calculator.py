@@ -215,6 +215,15 @@ class ComprehensiveTaxCalculator(ITaxCalculator):
                 )
                 deductions['professional_tax'] = prof_calc.deduction_under_16
         
+        # Bank Interest Deductions (80TTA/80TTB) - Old regime only
+        if input_data.bank_interest_income > 0 and input_data.regime_type == TaxRegimeType.OLD:
+            if input_data.age_category in [AgeCategory.SENIOR_60_TO_80, AgeCategory.SUPER_SENIOR_ABOVE_80]:
+                # Section 80TTB for senior citizens - up to Rs. 50,000
+                deductions['section_80ttb'] = min(input_data.bank_interest_income, Decimal('50000'))
+            else:
+                # Section 80TTA for non-senior citizens - up to Rs. 10,000
+                deductions['section_80tta'] = min(input_data.bank_interest_income, Decimal('10000'))
+        
         return deductions
     
     def _create_adjusted_input(
@@ -231,7 +240,7 @@ class ComprehensiveTaxCalculator(ITaxCalculator):
         # Adjust gross salary for exemptions (these reduce taxable salary)
         adjusted_gross_salary = original_input.gross_salary - total_exemptions
         
-        # Adjust gross total income (same as gross salary for our purposes)
+        # Adjust gross total income (same as gross salary for calculation purposes)
         adjusted_gross_total_income = original_input.gross_salary + original_input.other_income - total_exemptions
         
         # Create adjusted input

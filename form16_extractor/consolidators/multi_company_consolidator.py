@@ -425,7 +425,7 @@ class MultiCompanyForm16Consolidator:
         if abs(tds_data.total_tds_deducted - tds_data.total_tds_deposited) > Decimal('1'):
             warnings.append(ConsolidationWarning(
                 type="tds_mismatch",
-                message="TDS deducted and deposited amounts don't match",
+                message="TDS deducted and deposited amounts do not match",
                 affected_employers=list(tds_data.employer_wise_tds.keys()),
                 severity="high"
             ))
@@ -527,7 +527,8 @@ class MultiCompanyForm16Consolidator:
                 if year_match:
                     year = int(year_match.group(1))
                     return f"{year}-{(year + 1) % 100:02d}"
-            except:
+            except (ValueError, AttributeError, TypeError):
+                # Failed to parse year from document - continue without it
                 pass
         
         return None

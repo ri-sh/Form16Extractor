@@ -69,7 +69,7 @@ ln -s "$(brew --prefix gs)/lib/libgs.dylib" ~/lib
 ### Install Form16 Extractor
 
 ```bash
-git clone https://github.com/your-username/form16_extractor.git
+git clone https://github.com/username/form16_extractor.git
 cd form16_extractor
 pip install -r requirements.txt
 
@@ -90,11 +90,14 @@ python cli.py extract --file path/to/Form16.pdf --calculate-tax --summary
 # Extract to JSON
 python cli.py extract --file form16_sample.pdf --output result.json
 
+# Consolidate multiple Form16s from different employers
+python cli.py consolidate --files company1.pdf company2.pdf --calculate-tax 
+
 # Extract with tax calculation
 python cli.py extract --file form16_sample.pdf --calculate-tax
 
 # Get detailed tax breakdown with regime comparison
-python cli.py extract --file form16_sample.pdf --calculate-tax --summary --tax-regime both
+python cli.py extract --file form16_sample.pdf --calculate-tax --summary 
 
 # Calculate for specific regime only
 python cli.py extract --file form16_sample.pdf --calculate-tax --tax-regime new
@@ -102,8 +105,19 @@ python cli.py extract --file form16_sample.pdf --calculate-tax --tax-regime new
 # Visual colored display with regime comparison (best for analysis)
 python cli.py extract --file form16_sample.pdf --calculate-tax --display-mode colored
 
-# Consolidate multiple Form16s from different employers
-python cli.py consolidate --files company1.pdf company2.pdf --calculate-tax 
+# Plain table display for simple text output
+python cli.py extract --file form16_sample.pdf --calculate-tax --display-mode table
+
+# Add bank interest income for accurate 80TTA/80TTB calculations
+python cli.py extract --file form16_sample.pdf --calculate-tax --bank-interest 25000
+
+# Include other income sources (rental, freelance, etc.)
+python cli.py extract --file form16_sample.pdf --calculate-tax --other-income 50000
+
+# Tax calculation for senior citizens (60-80 years)
+python cli.py extract --file form16_sample.pdf --calculate-tax --age-category senior_60_to_80
+
+
 ```
 
 ---
@@ -131,9 +145,37 @@ print(form16_result.salary.gross_salary)
 print(form16_result.employer.name)
 ```
 
+### Tax Calculation API
+
+```python
+from form16_extractor.api import TaxCalculationAPI, TaxRegime
+from decimal import Decimal
+
+# Initialize API
+api = TaxCalculationAPI()
+
+# Calculate tax from Form16 PDF
+result = api.calculate_tax_from_form16(
+    form16_file="form16_sample.pdf",
+    regime=TaxRegime.BOTH,
+    bank_interest=Decimal("25000")
+)
+
+# Calculate tax from manual input
+result = api.calculate_tax_from_input(
+    assessment_year="2024-25",
+    gross_salary=Decimal("1200000"),
+    regime=TaxRegime.BOTH,
+    section_80c=Decimal("150000"),
+    tds_paid=Decimal("180000")
+)
+
+print(result['recommendation'])  # e.g., "NEW regime saves ₹25,000 annually"
+```
+
 ---
 
-## Example output (comprehensive)
+## Example output JSON (comprehensive)
 
 ```json
 {

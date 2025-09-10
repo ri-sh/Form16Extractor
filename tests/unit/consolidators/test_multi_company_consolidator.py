@@ -110,7 +110,7 @@ class TestMultiCompanyForm16Consolidator:
         result = self.consolidator.consolidate_form16s(form16_list)
         
         assert result.status == ConsolidationStatus.SUCCESS
-        assert result.employee_pan == "ABCDE1234F"
+        assert result.employee_pan == "TEST12345F"
         assert result.form16_count == 2
         assert len(result.source_employers) == 2
         assert "Example Company A" in result.source_employers

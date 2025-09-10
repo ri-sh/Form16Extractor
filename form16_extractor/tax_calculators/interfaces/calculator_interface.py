@@ -33,6 +33,10 @@ class TaxCalculationInput:
     
     # Optional fields with defaults
     age_category: AgeCategory = AgeCategory.BELOW_60
+    
+    # Income from other sources (detailed breakdown)
+    bank_interest_income: Decimal = Decimal('0')
+    dividend_income: Decimal = Decimal('0')
     other_income: Decimal = Decimal('0')
     house_property_income: Decimal = Decimal('0')
     

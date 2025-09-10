@@ -235,3 +235,81 @@ class Form16ToTaxMapper:
         
         # Default to below 60 for now
         return AgeCategory.BELOW_60
+    
+    def extract_other_income_from_form16(self, form16_data, verbose: bool = False) -> Dict[str, Decimal]:
+        """
+        Extract other income data from Form16 document.
+        
+        Attempts to extract bank interest, dividends, and other income sources
+        from the Form16 data structure. Falls back to zero values if data is not available.
+        
+        Args:
+            form16_data: Extracted Form16 data object
+            verbose: Whether to log extraction details
+            
+        Returns:
+            Dictionary with extracted other income values:
+            - bank_interest: Bank interest income
+            - other_income: Other income (excluding bank interest and house property)
+            - house_property: House property income
+        """
+        extracted_income = {
+            'bank_interest': Decimal('0'),
+            'other_income': Decimal('0'),
+            'house_property': Decimal('0')
+        }
+        
+        try:
+            # Try to extract from structured data if available
+            if hasattr(form16_data, 'other_income'):
+                other_income_data = form16_data.other_income
+                
+                # House property income
+                if hasattr(other_income_data, 'income_from_house_property') and other_income_data.income_from_house_property:
+                    extracted_income['house_property'] = Decimal(str(other_income_data.income_from_house_property))
+                    if verbose:
+                        print(f"DEBUG: Found house property income: {extracted_income['house_property']}")
+                
+                # Other sources (could include bank interest, dividends)
+                if hasattr(other_income_data, 'income_from_other_sources') and other_income_data.income_from_other_sources:
+                    total_other_sources = Decimal(str(other_income_data.income_from_other_sources))
+                    
+                    # For now, assume all "other sources" is bank interest
+                    # In future, this could be enhanced to parse specific components
+                    extracted_income['bank_interest'] = total_other_sources
+                    extracted_income['other_income'] = Decimal('0')  # Remainder after bank interest
+                    
+                    if verbose:
+                        print(f"DEBUG: Found income from other sources: {total_other_sources}")
+                        print(f"DEBUG: Treating as bank interest income")
+                
+                # Total other income check
+                if hasattr(other_income_data, 'total') and other_income_data.total:
+                    total_other_income = Decimal(str(other_income_data.total))
+                    
+                    # If we have a total but haven't found specific breakdowns,
+                    # try to allocate intelligently
+                    if total_other_income > 0 and extracted_income['bank_interest'] == 0 and extracted_income['house_property'] == 0:
+                        # Assume it's primarily bank interest for now
+                        extracted_income['bank_interest'] = total_other_income
+                        
+                        if verbose:
+                            print(f"DEBUG: Found total other income: {total_other_income}")
+                            print(f"DEBUG: Allocated as bank interest (no specific breakdown available)")
+            
+            # Try alternative data structure paths
+            elif hasattr(form16_data, 'income') and hasattr(form16_data.income, 'other_income'):
+                alt_other_income = form16_data.income.other_income
+                if alt_other_income:
+                    extracted_income['other_income'] = Decimal(str(alt_other_income))
+                    if verbose:
+                        print(f"DEBUG: Found other income via alternative path: {extracted_income['other_income']}")
+            
+            if verbose and all(v == 0 for v in extracted_income.values()):
+                print("DEBUG: No other income data found in Form16 document")
+                
+        except Exception as e:
+            if verbose:
+                print(f"DEBUG: Error extracting other income from Form16: {e}")
+        
+        return extracted_income

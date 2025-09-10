@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-09-09
+
+### Added
+
+#### Comprehensive Tax Calculation API (P0 - COMPLETED)
+- **Complete Programmatic API**: Created comprehensive `TaxCalculationAPI` class for standalone tax calculations independent of CLI
+- **Dual Calculation Methods**: Support for both Form16 PDF extraction (`calculate_tax_from_form16`) and manual input (`calculate_tax_from_input`)
+- **Multi-Regime Analysis**: Automatic comparison between old and new tax regimes with intelligent recommendations
+- **Smart Regime Selection**: AI-powered recommendations showing exact annual savings between regimes
+- **Bank Interest Integration**: Automatic Section 80TTA/80TTB deduction calculation for bank interest income
+- **Clean Architecture**: Proper separation of concerns between CLI orchestration and business logic components
+
+#### Multi-Year Tax Calculation Support (P1 - COMPLETED)  
+- **Extended Year Coverage**: Full support for assessment years 2020-21 through 2025-26
+- **Year-Specific Tax Rules**: Accurate tax slabs, deductions, and exemptions for each assessment year
+- **Regime Availability Logic**: Automatic detection of old/new regime availability by year (new regime from 2020-21 onwards)
+- **Historical Tax Analysis**: Calculate taxes for any supported assessment year with period-appropriate rules
+- **Future Year Planning**: Support for upcoming assessment years with projected tax rules
+
+#### Enhanced Form16 Integration for Other Income Sources (P2 - COMPLETED)
+- **Automatic Income Extraction**: Direct extraction of bank interest, dividend, and other income from Form16 documents where available
+- **Reduced Manual Input**: Minimized dependency on CLI parameters for income sources through intelligent Form16 parsing
+- **Comprehensive Income Mapping**: Complete mapping of Form16 other income fields to tax calculation inputs
+- **Income Source Validation**: Automatic validation and categorization of different income types from Form16
+
+#### Advanced Tax Calculation Engine
+- **Comprehensive Tax Components**: Full implementation of basic tax, surcharge, health and education cess calculations
+- **Marginal Relief Calculations**: Accurate marginal relief for surcharge calculations at ₹50L and ₹1Cr thresholds  
+- **Section-wise Deduction Processing**: Complete support for all major tax-saving sections (80C, 80D, 80CCD, 80E, 80G, etc.)
+- **Exemption Calculations**: Comprehensive handling of Section 10 exemptions (HRA, LTA, gratuity, etc.)
+- **TDS and Tax Balance**: Accurate calculation of refunds due or additional tax payable
+
+#### Developer Experience Enhancements
+- **Type-Safe API**: Complete type hints and Pydantic models for all API inputs and outputs
+- **Comprehensive Error Handling**: Detailed error messages with specific error codes for different failure scenarios
+- **Extensive Documentation**: Complete API documentation with practical examples and use cases
+- **Test Coverage**: Full test suite covering all API methods and edge cases
+- **Utility Methods**: Helper functions for checking supported years and regime availability
+
+### Enhanced Features
+
+#### CLI Integration
+- **Seamless API Integration**: CLI now uses the new API internally while maintaining backward compatibility
+- **Enhanced Error Reporting**: Better error messages and validation feedback through improved API error handling
+- **Performance Improvements**: Faster tax calculations through optimized API architecture
+
+#### Data Architecture Improvements  
+- **Clean Separation of Concerns**: Business logic properly separated from CLI presentation layer
+- **Modular Design**: Highly modular API components enabling selective usage (extraction-only, calculation-only, etc.)
+- **Interface-Based Architecture**: Clean interfaces enabling easy extension and testing
+- **Memory Efficiency**: Optimized data structures and processing for better memory usage
+
+### Technical Implementation
+
+#### Architecture Enhancements
+- **API Package Structure**: New `form16_extractor.api` package with clean public interface
+- **Enhanced Data Mappers**: Improved `Form16ToTaxMapper` with comprehensive Form16 to tax input conversion
+- **Robust PDF Processing**: Enhanced PDF extraction pipeline with better error handling and performance
+- **Configuration Management**: Flexible configuration system for different calculation scenarios
+
+#### Code Quality
+- **Professional Documentation**: Comprehensive docstrings and examples for all public APIs
+- **Error Resilience**: Graceful handling of malformed PDFs and incomplete data
+- **Performance Optimization**: Efficient processing for both single calculations and batch operations
+- **Memory Safety**: Proper resource management and cleanup throughout the API
+
+### Migration Guide
+- **Backward Compatibility**: All existing CLI commands remain fully compatible
+- **New API Usage**: Simple import and usage pattern: `from form16_extractor.api import TaxCalculationAPI`
+- **Enhanced Capabilities**: Existing users can now access programmatic API for custom integrations
+- **Gradual Migration**: Can adopt new API features incrementally without breaking existing workflows
+
 ## [2.0.2] - 2025-09-09
 
 ### Added
@@ -194,41 +266,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upcoming Features (Roadmap)
 
-### [2.1.0] - Planned
-- **Enhanced Format Support**:
-  - Support for scanned Form16 documents (OCR)
-  - Better handling of custom employer formats
-  - Multi-language Form16 support
+### [2.2.0] - Planned
 
-- **Tax Optimization Engine**:
+#### Critical Backlog Items
+- **CSV/XLSX Export Functionality (P1)**:
+  - Complete implementation of CSV export format for extracted Form16 data
+  - Complete implementation of XLSX export format with customizable templates
+  - Currently CLI accepts --format csv/xlsx but doesn't create files
+
+- **Batch Processing Enhancements (P2)**:
+  - Add tax calculation support to batch processing command
+  - Enable bulk tax computation for multiple Form16 files
+  - Currently limited to extraction only, missing --calculate-tax option
+
+#### Legacy Features
+- **Tax Optimization Engine (P1)**:
   - Intelligent tax-saving suggestions based on individual financial profile
   - Investment recommendation engine for tax efficiency
   - Deduction optimization across multiple financial instruments
 
-- **Advanced Integration**:
+- **Advanced Integration (P0)**:
   - REST API wrapper for enterprise integration
-  - Excel/CSV export options with customizable templates
   - Database integration for historical tax data management
 
-### [2.2.0] - Planned
-- **Multi-Year Tax Planning**:
+### [2.3.0] - Planned
+- **Multi-Year Tax Planning(P1)**:
   - Historical tax analysis across multiple assessment years
   - Tax trend analysis and future planning recommendations
   - Capital gains integration for comprehensive tax calculation
 
-- **Machine Learning Enhancements**:
-  - ML-based field detection for complex layouts
-  - Automatic format learning and adaptation
-  - Improved confidence scoring algorithms
-
-- **Developer Tools**:
+- **Developer Tools(P1)**:
   - Form16 anonymization utilities for testing
   - Test data generators for development
   - Debugging and visualization tools
   - Performance profiling and optimization tools
+  
+- **Enhanced Format Support(P3)**:
+  - Support for scanned Form16 documents (OCR)
+  - Better handling of custom employer formats
+  - Multi-language Form16 support
 
+- **Machine Learning Enhancements(P3)**:
+  - ML-based field detection for complex layouts
+  - Automatic format learning and adaptation
+  - Improved confidence scoring algorithms
 ---
 
 ## Support
 
-For questions, bug reports, or feature requests, please visit our [GitHub Issues](https://github.com/yourusername/form16-extractor/issues) page.
+For questions, bug reports, or feature requests, please visit our [GitHub Issues](https://github.com/username/form16-extractor/issues) page.

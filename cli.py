@@ -22,16 +22,12 @@ from contextlib import redirect_stderr
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pypdf")
 warnings.filterwarnings("ignore", message="ARC4 has been moved to cryptography.hazmat.decrepit")
 
-# Suppress jpype warning by temporarily redirecting stderr during tabula import
-original_stderr = sys.stderr
-sys.stderr = io.StringIO()
+# Suppress jpype warning during tabula import using proper context manager
 try:
-    # This will trigger the jpype import warning, which we suppress
-    import tabula
+    with redirect_stderr(io.StringIO()):
+        import tabula
 except:
     pass
-finally:
-    sys.stderr = original_stderr
 
 # Suppress debug logging from extraction modules unless verbose mode is enabled
 logging.getLogger('form16_extractor').setLevel(logging.WARNING)
@@ -42,10 +38,9 @@ import sys
 import time
 from pathlib import Path
 from typing import List, Dict, Any
-import asyncio
 from datetime import datetime
 
-# Import our extraction modules  
+# Import the extraction modules  
 from form16_extractor.extractors.enhanced_form16_extractor import EnhancedForm16Extractor, ProcessingLevel
 from form16_extractor.pdf.reader import RobustPDFProcessor
 from form16_extractor.utils.json_builder import Form16JSONBuilder
@@ -141,8 +136,16 @@ Examples:
             help="Show detailed tax calculation breakdown (when using --calculate-tax)"
         )
         extract_parser.add_argument(
-            "--display-mode", choices=["table", "colored"], default="table",
-            help="Display mode for tax regime comparison (default: table, colored: regime components with background colors)"
+            "--display-mode", choices=["table", "colored"], default="colored",
+            help="Display mode for tax regime comparison (default: colored, table: plain text tabular format)"
+        )
+        extract_parser.add_argument(
+            "--bank-interest", type=float, default=0,
+            help="Annual bank/FD interest income (for 80TTA/80TTB deduction calculation)"
+        )
+        extract_parser.add_argument(
+            "--other-income", type=float, default=0,
+            help="Other income sources (dividends, rent, etc.) not covered in Form16"
         )
         
         # Batch command
@@ -217,8 +220,25 @@ Examples:
             help="Run performance benchmarks"
         )
         
+        # Info command
+        info_parser = subparsers.add_parser(
+            "info", help="Show information about supported years and tax rules"
+        )
+        info_parser.add_argument(
+            "--years", action="store_true",
+            help="Show all supported assessment years with available regimes"
+        )
+        info_parser.add_argument(
+            "--surcharge", action="store_true",
+            help="Show current surcharge rates (or rates for specified year)"
+        )
+        info_parser.add_argument(
+            "--assessment-year", type=str,
+            help="Show information for specific assessment year (format: YYYY-YY)"
+        )
+        
         # Common arguments
-        for subparser in [extract_parser, batch_parser, consolidate_parser, validate_parser, test_parser]:
+        for subparser in [extract_parser, batch_parser, consolidate_parser, validate_parser, test_parser, info_parser]:
             subparser.add_argument(
                 "--verbose", "-v", action="store_true",
                 help="Enable verbose logging"
@@ -406,6 +426,16 @@ Examples:
                         format = "json"
                         pretty = True
                         verbose = args.verbose
+                        calculate_tax = False  # Batch processing doesn't support tax calculation yet
+                        tax_regime = "both"
+                        age_category = "below_60"
+                        city_type = "metro"
+                        bank_interest = 0
+                        other_income = 0
+                        summary = False
+                        display_mode = "colored"
+                        config = None
+                        log_file = None
                     
                     result = self.extract_single_file(MockArgs())
                     if result == 0:
@@ -525,6 +555,16 @@ Examples:
                 format = "json"
                 pretty = False
                 verbose = args.verbose
+                calculate_tax = False  # Test mode doesn't support tax calculation
+                tax_regime = "both"
+                age_category = "below_60"
+                city_type = "metro"
+                bank_interest = 0
+                other_income = 0
+                summary = False
+                display_mode = "colored"
+                config = None
+                log_file = None
             
             result = self.extract_single_file(MockArgs())
             if result == 0:
@@ -544,7 +584,9 @@ Examples:
             from form16_extractor.tax_calculators.interfaces.calculator_interface import (
                 TaxRegimeType, AgeCategory
             )
-            from decimal import Decimal
+            from form16_extractor.tax_calculators.rules.year_specific_rule_provider import (
+                YearSpecificTaxRuleProvider
+            )
             
             # Extract financial data from Form16Document
             if not hasattr(form16_result, 'salary') or not hasattr(form16_result, 'chapter_via_deductions'):
@@ -587,8 +629,9 @@ Examples:
             estimated_basic = basic_salary if basic_salary > 0 else gross_salary * Decimal('0.5')  # Use actual basic or assume 50%
             estimated_hra = estimated_basic * Decimal('0.4')  # Assume 40% HRA of basic
             
-            # Determine assessment year from extraction
-            assessment_year = "2024-25"  # Default, can be enhanced to extract from form
+            # Extract assessment year from Form16 document
+            assessment_year = self._extract_assessment_year_from_form16(form16_result)
+            logging.debug(f"Extracted assessment year: {assessment_year}")
             
             # Age category mapping
             age_map = {
@@ -598,7 +641,7 @@ Examples:
             }
             
             tax_results = {'extraction_data': extraction_data}
-            calculator = ComprehensiveTaxCalculator()
+            calculator = ComprehensiveTaxCalculator(YearSpecificTaxRuleProvider())
             
             # Calculate for requested regime(s)
             regimes_to_calculate = []
@@ -609,13 +652,24 @@ Examples:
             else:
                 regimes_to_calculate = [("old", TaxRegimeType.OLD)]
             
+            # Extract other income from Form16 data if available, otherwise use CLI parameters
+            from form16_extractor.integrators.data_mapper import Form16ToTaxMapper
+            data_mapper = Form16ToTaxMapper()
+            extracted_other_income = data_mapper.extract_other_income_from_form16(form16_result, args.verbose)
+            bank_interest_income = extracted_other_income.get('bank_interest', Decimal(str(args.bank_interest)))
+            other_income_amount = extracted_other_income.get('other_income', Decimal(str(args.other_income)))
+            house_property_income = extracted_other_income.get('house_property', Decimal('0'))
+            
             for regime_name, regime_type in regimes_to_calculate:
-                # Create comprehensive input
+                # Create comprehensive input with separated income sources
                 comprehensive_input = ComprehensiveTaxCalculationInput(
                     assessment_year=assessment_year,
                     regime_type=regime_type,
                     age_category=age_map[args.age_category],
                     gross_salary=gross_salary,
+                    bank_interest_income=bank_interest_income,
+                    other_income=other_income_amount,
+                    house_property_income=house_property_income,
                     section_80c=section_80c,
                     section_80ccd_1b=section_80ccd_1b,
                     tds_deducted=total_tds,
@@ -648,7 +702,17 @@ Examples:
             return tax_results
             
         except Exception as e:
-            if args.verbose:
+            # Check if it's a regime availability error
+            error_msg = str(e)
+            if ("only supports old regime" in error_msg and hasattr(args, 'tax_regime') and "new" in str(args.tax_regime)) or ("Regime new not supported for year" in error_msg):
+                print(f"\nTAX REGIME ERROR:")
+                print(f"The requested tax regime is not available for assessment year {assessment_year}")
+                if "2020-21" in assessment_year or "2021-22" in assessment_year or "2022-23" in assessment_year:
+                    print(f"Note: New tax regime was not available in {assessment_year}. Only old regime was applicable.")
+                    print(f"Please use --tax-regime old for this assessment year.")
+                else:
+                    print(f"Available regimes may vary by assessment year.")
+            else:
                 print(f"Tax calculation error: {e}")
                 import traceback
                 traceback.print_exc()
@@ -663,22 +727,24 @@ Examples:
             from form16_extractor.tax_calculators.interfaces.calculator_interface import (
                 TaxRegimeType, AgeCategory
             )
-            from decimal import Decimal
+            from form16_extractor.tax_calculators.rules.year_specific_rule_provider import (
+                YearSpecificTaxRuleProvider
+            )
             
-            # Extract data from Form16Document (our actual structure)
+            # Extract data from Form16Document (the actual structure)
             salary = form16_result.salary if hasattr(form16_result, 'salary') and form16_result.salary else None
             deductions = form16_result.chapter_via_deductions if hasattr(form16_result, 'chapter_via_deductions') and form16_result.chapter_via_deductions else None
             employer = form16_result.employer if hasattr(form16_result, 'employer') and form16_result.employer else None
             employee = form16_result.employee if hasattr(form16_result, 'employee') and form16_result.employee else None
             
-            # Check if we have the new JSON structure instead
+            # Check if the system has the new JSON structure instead
             has_form16_structure = hasattr(form16_result, 'form16') and hasattr(form16_result.form16, 'part_b')
             
             if not salary and not has_form16_structure:
                 return None
             
             # Create tax inputs for both regimes
-            calculator = ComprehensiveTaxCalculator()
+            calculator = ComprehensiveTaxCalculator(YearSpecificTaxRuleProvider())
             
             # Determine age category from CLI args
             age_category = AgeCategory.BELOW_60
@@ -723,6 +789,9 @@ Examples:
             results = {}
             regimes_to_calculate = []
             
+            # Get assessment year to check regime support
+            assessment_year = self._extract_assessment_year_from_form16(form16_result)
+            
             if hasattr(args, 'tax_regime') and args.tax_regime:
                 if args.tax_regime == 'old':
                     regimes_to_calculate = [TaxRegimeType.OLD]
@@ -731,39 +800,69 @@ Examples:
                 else:  # 'both'
                     regimes_to_calculate = [TaxRegimeType.OLD, TaxRegimeType.NEW]
             else:
-                regimes_to_calculate = [TaxRegimeType.OLD, TaxRegimeType.NEW]
+                # Default: calculate both regimes only if both are supported
+                regimes_to_calculate = [TaxRegimeType.OLD]
+                
+                # Check if new regime is supported for this assessment year
+                if assessment_year and not any(year in assessment_year for year in ["2020-21", "2021-22", "2022-23"]):
+                    # New regime is available for years after 2022-23
+                    regimes_to_calculate.append(TaxRegimeType.NEW)
             
             for regime in regimes_to_calculate:
-                # Create input for each regime
-                tax_input = ComprehensiveTaxCalculationInput(
-                    # Basic fields
-                    gross_salary=gross_salary,
-                    basic_salary=basic_salary,
-                    section_80c=section_80c if regime == TaxRegimeType.OLD else Decimal('0'),
-                    section_80ccd_1b=section_80ccd_1b,
-                    section_80d=section_80d if regime == TaxRegimeType.OLD else Decimal('0'),
-                    age_category=age_category,
-                    regime_type=regime,
-                    assessment_year="2024-25",
+                try:
+                    # Create input for each regime
+                    tax_input = ComprehensiveTaxCalculationInput(
+                        # Basic fields
+                        gross_salary=gross_salary,
+                        basic_salary=basic_salary,
+                        section_80c=section_80c if regime == TaxRegimeType.OLD else Decimal('0'),
+                        section_80ccd_1b=section_80ccd_1b,
+                        section_80d=section_80d if regime == TaxRegimeType.OLD else Decimal('0'),
+                        age_category=age_category,
+                        regime_type=regime,
+                        assessment_year=self._extract_assessment_year_from_form16(form16_result),
+                        
+                        # HRA fields (basic estimates)
+                        hra_received=Decimal(str(salary.hra_received or 0)) if salary else Decimal('0'),
+                        city_type='metro',  # Default assumption
+                        
+                        # Other defaults
+                        salary_arrears={},
+                        perquisites_total=Decimal(str(salary.perquisites_value or 0)) if salary else Decimal('0')
+                    )
                     
-                    # HRA fields (basic estimates)
-                    hra_received=Decimal(str(salary.hra_received or 0)) if salary else Decimal('0'),
-                    city_type='metro',  # Default assumption
+                    # Calculate tax for this regime
+                    result = calculator.calculate_tax(tax_input)
+                    results[regime] = result
                     
-                    # Other defaults
-                    salary_arrears={},
-                    perquisites_total=Decimal(str(salary.perquisites_value or 0)) if salary else Decimal('0')
-                )
-                
-                # Calculate tax for this regime
-                result = calculator.calculate_tax(tax_input)
-                results[regime] = result
+                except Exception as regime_error:
+                    # Skip regimes that are not supported for this assessment year
+                    error_str = str(regime_error)
+                    if ("only supports old regime" in error_str or 
+                        "not supported for year" in error_str):
+                        # Skip this regime - not supported for this year
+                        continue
+                    else:
+                        # Re-raise unexpected errors
+                        raise regime_error
             
             # Build CLI-friendly result
             return self._build_cli_tax_result(results, form16_result, args)
             
         except Exception as e:
-            if hasattr(args, 'verbose') and args.verbose:
+            # Check if it's a regime availability error
+            error_msg = str(e)
+            assessment_year = self._extract_assessment_year_from_form16(form16_result)
+            
+            if ("only supports old regime" in error_msg and hasattr(args, 'tax_regime') and "new" in str(args.tax_regime)) or ("Regime new not supported for year" in error_msg):
+                print(f"\nTAX REGIME ERROR:")
+                print(f"The requested tax regime is not available for assessment year {assessment_year}")
+                if "2020-21" in assessment_year or "2021-22" in assessment_year or "2022-23" in assessment_year:
+                    print(f"Note: New tax regime was not available in {assessment_year}. Only old regime was applicable.")
+                    print(f"Please use --tax-regime old for this assessment year.")
+                else:
+                    print(f"Available regimes may vary by assessment year.")
+            else:
                 import traceback
                 print(f"Tax calculation error: {e}")
                 traceback.print_exc()
@@ -772,7 +871,6 @@ Examples:
     def _build_cli_tax_result(self, results, form16_result, args):
         """Build CLI-friendly tax result with regime comparison."""
         from form16_extractor.tax_calculators.interfaces.calculator_interface import TaxRegimeType
-        from decimal import Decimal
         
         if not results:
             return None
@@ -818,7 +916,7 @@ Examples:
             total_perq = sum(float(v) for v in form16_result.detailed_perquisites.values() if v)
             section_17_2_perquisites = total_perq
         
-        # Debug: log what we found for verbose mode
+        # Debug: log what was found for verbose mode
         if hasattr(args, 'verbose') and args.verbose:
             logging.debug(f"Section 17(1): {section_17_1_salary}")
             logging.debug(f"Section 17(2): {section_17_2_perquisites}")
@@ -830,7 +928,8 @@ Examples:
             'employee_info': {
                 'name': self._extract_employee_name(form16_result),
                 'pan': self._extract_employee_pan(form16_result),
-                'employer': self._extract_employer_name(form16_result)
+                'employer': self._extract_employer_name(form16_result),
+                'assessment_year': self._extract_assessment_year_from_form16(form16_result)
             },
             'financial_data': {
                 'section_17_1_salary': section_17_1_salary,
@@ -1083,8 +1182,6 @@ Examples:
     def _build_consolidated_form16(self, extracted_forms, common_fy):
         """Build consolidated Form16 data from multiple forms."""
         
-        from decimal import Decimal
-        
         # Initialize consolidated structure
         consolidated = {
             'consolidation_info': {
@@ -1145,8 +1242,6 @@ Examples:
         """Calculate tax on consolidated income from multiple employers."""
         
         try:
-            from decimal import Decimal
-            
             consolidated_data = consolidated_result['consolidated_data']
             
             # For consolidated tax calculation, we'll use a simplified approach
@@ -1195,7 +1290,6 @@ Examples:
     
     def _calculate_simple_tax(self, taxable_income):
         """Calculate tax liability for consolidated income using current tax slabs."""
-        from decimal import Decimal
         
         # New regime AY 2024-25 slabs
         tax = Decimal('0')
@@ -1287,6 +1381,8 @@ Examples:
             return self.validate_results(args)
         elif args.command == "test":
             return self.run_tests(args)
+        elif args.command == "info":
+            return self.show_info(args)
         else:
             print(f"Unknown command: {args.command}")
             return 1
@@ -1344,7 +1440,206 @@ Examples:
         colored_output = renderer.render_complete_display(tax_results)
         print(colored_output)
     
+    def _normalize_assessment_year_format(self, assessment_year: str) -> str:
+        """Normalize assessment year format from YYYY-YYYY to YY-YY."""
+        if not assessment_year:
+            return "2024-25"
+        
+        # Handle format like "2021-2022" -> "2021-22"
+        if len(assessment_year) == 9 and '-' in assessment_year:
+            parts = assessment_year.split('-')
+            if len(parts) == 2 and len(parts[0]) == 4 and len(parts[1]) == 4:
+                # Convert "2021-2022" to "2021-22"
+                start_year = parts[0]
+                end_year = parts[1][-2:]  # Last 2 digits
+                return f"{start_year}-{end_year}"
+        
+        # Return as-is if already in correct format or unrecognized format
+        return assessment_year
+    
+    def _extract_assessment_year_from_form16(self, form16_result) -> str:
+        """Extract assessment year from Form16 document."""
+        # Try multiple extraction paths
+        
+        # Method 1: Direct from metadata
+        if hasattr(form16_result, 'metadata') and form16_result.metadata:
+            if hasattr(form16_result.metadata, 'assessment_year') and form16_result.metadata.assessment_year:
+                raw_year = form16_result.metadata.assessment_year
+                return self._normalize_assessment_year_format(raw_year)
+        
+        # Method 2: From JSON structure
+        if hasattr(form16_result, 'form16') and hasattr(form16_result.form16, 'part_a'):
+            part_a = form16_result.form16.part_a
+            if hasattr(part_a, 'assessment_year') and part_a.assessment_year:
+                raw_year = part_a.assessment_year
+                return self._normalize_assessment_year_format(raw_year)
+        
+        # Method 3: Use data mapper utility
+        try:
+            from form16_extractor.integrators.data_mapper import Form16DataMapper
+            mapper = Form16DataMapper()
+            raw_year = mapper.extract_assessment_year(form16_result)
+            return self._normalize_assessment_year_format(raw_year)
+        except:
+            pass
+        
+        # Fallback: Default to current assessment year
+        return "2024-25"
+    
     # Removed old placeholder methods - now using working Form16TaxIntegrator!
+    
+    def show_info(self, args) -> int:
+        """Show information about supported years and tax rules."""
+        try:
+            from form16_extractor.tax_calculators.main_calculator import MultiYearTaxCalculator
+            from form16_extractor.tax_calculators.interfaces.calculator_interface import TaxRegimeType
+            
+            calculator = MultiYearTaxCalculator()
+            
+            # If no specific flags provided, show years by default
+            if not args.years and not args.surcharge and not args.assessment_year:
+                args.years = True
+            
+            # Show supported years information
+            if args.years:
+                self._show_supported_years_info(calculator)
+                
+            # Show surcharge rates
+            if args.surcharge:
+                assessment_year = args.assessment_year or "2024-25"  # Current FY by default
+                self._show_surcharge_rates(calculator, assessment_year)
+            
+            # Show specific year information
+            if args.assessment_year and not args.years and not args.surcharge:
+                self._show_year_specific_info(calculator, args.assessment_year)
+                
+            return 0
+            
+        except Exception as e:
+            print(f"Error showing information: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
+            return 1
+    
+    def _show_supported_years_info(self, calculator):
+        """Show information about all supported assessment years."""
+        from form16_extractor.tax_calculators.interfaces.calculator_interface import TaxRegimeType
+        
+        print("\nSUPPORTED ASSESSMENT YEARS")
+        print("=" * 65)
+        
+        supported_years = calculator.get_supported_assessment_years()
+        
+        for year in sorted(supported_years):
+            print(f"\nAssessment Year: {year}")
+            print("-" * 40)
+            
+            # Check which regimes are supported
+            old_supported = calculator.rule_provider.is_regime_supported(year, TaxRegimeType.OLD)
+            new_supported = calculator.rule_provider.is_regime_supported(year, TaxRegimeType.NEW)
+            
+            if old_supported and new_supported:
+                print("   Tax Regimes: OLD [SUPPORTED] | NEW [SUPPORTED]")
+                print("   Note: Both regimes available for comparison")
+            elif old_supported:
+                print("   Tax Regimes: OLD [SUPPORTED] | NEW [NOT SUPPORTED]")
+                print("   Note: Only old regime available (new regime not introduced)")
+            elif new_supported:
+                print("   Tax Regimes: OLD [NOT SUPPORTED] | NEW [SUPPORTED]")
+                print("   Note: Only new regime available (old regime phased out)")
+            else:
+                print("   Tax Regimes: OLD [NOT SUPPORTED] | NEW [NOT SUPPORTED]")
+                print("   Note: No regimes configured")
+            
+            # Show financial year mapping
+            if year.startswith("20"):
+                parts = year.split("-")
+                if len(parts) == 2:
+                    fy_start = f"20{parts[1]}-04-01" if len(parts[1]) == 2 else f"{parts[0]}-04-01"
+                    fy_end = f"20{parts[1]}-03-31" if len(parts[1]) == 2 else f"{parts[1]}-03-31"
+                    print(f"   Financial Year: {fy_start} to {fy_end}")
+        
+        print(f"\nTotal supported years: {len(supported_years)}")
+        print("\nUsage Examples:")
+        print("  python cli.py info --surcharge --assessment-year 2024-25")
+        print("  python cli.py extract --file form16.pdf --calculate-tax")
+    
+    def _show_surcharge_rates(self, calculator, assessment_year):
+        """Show surcharge rates for specific assessment year."""
+        from form16_extractor.tax_calculators.interfaces.calculator_interface import TaxRegimeType
+        
+        try:
+            print(f"\nSURCHARGE RATES - Assessment Year {assessment_year}")
+            print("=" * 65)
+            
+            # Get regimes for the year
+            old_supported = calculator.rule_provider.is_regime_supported(assessment_year, TaxRegimeType.OLD)
+            new_supported = calculator.rule_provider.is_regime_supported(assessment_year, TaxRegimeType.NEW)
+            
+            if old_supported:
+                self._show_regime_surcharge(calculator, assessment_year, TaxRegimeType.OLD, "OLD REGIME")
+            
+            if new_supported:
+                self._show_regime_surcharge(calculator, assessment_year, TaxRegimeType.NEW, "NEW REGIME")
+                
+            if not old_supported and not new_supported:
+                print(f"No tax regimes supported for assessment year {assessment_year}")
+                
+        except Exception as e:
+            print(f"Error retrieving surcharge rates: {e}")
+    
+    def _show_regime_surcharge(self, calculator, assessment_year, regime_type, regime_name):
+        """Show surcharge rates for specific regime."""
+        try:
+            regime = calculator.rule_provider.get_tax_regime(assessment_year, regime_type)
+            settings = regime.get_regime_settings()
+            
+            print(f"\n{regime_name}")
+            print("-" * 40)
+            
+            # Format currency amounts
+            def format_amount(amount):
+                if amount >= 10000000:  # 1 Crore
+                    return f"₹{amount/10000000:.0f} Cr"
+                elif amount >= 100000:  # 1 Lakh
+                    return f"₹{amount/100000:.0f} L"
+                else:
+                    return f"₹{amount:,.0f}"
+            
+            print(f"Income Range -> Surcharge Rate")
+            print(f"   Up to {format_amount(settings.surcharge_threshold_1)} → 0%")
+            print(f"   {format_amount(settings.surcharge_threshold_1)} - {format_amount(settings.surcharge_threshold_2)} → {settings.surcharge_rate_1}%")
+            print(f"   {format_amount(settings.surcharge_threshold_2)} - {format_amount(settings.surcharge_threshold_3)} → {settings.surcharge_rate_2}%")
+            
+            if hasattr(settings, 'surcharge_threshold_4') and settings.surcharge_threshold_4:
+                print(f"   {format_amount(settings.surcharge_threshold_3)} - {format_amount(settings.surcharge_threshold_4)} → {settings.surcharge_rate_3}%")
+                print(f"   Above {format_amount(settings.surcharge_threshold_4)} → {settings.surcharge_rate_4}%")
+            else:
+                print(f"   Above {format_amount(settings.surcharge_threshold_3)} → {settings.surcharge_rate_3}%")
+            
+            print(f"Health & Education Cess: 4% on (Tax + Surcharge)")
+            print(f"Marginal Relief: Available for surcharge calculations")
+            
+        except Exception as e:
+            print(f"Could not retrieve {regime_name} surcharge rates: {e}")
+    
+    def _show_year_specific_info(self, calculator, assessment_year):
+        """Show comprehensive information for specific assessment year."""
+        from form16_extractor.tax_calculators.interfaces.calculator_interface import TaxRegimeType
+        
+        print(f"\nASSESSMENT YEAR {assessment_year} - COMPREHENSIVE INFO")
+        print("=" * 65)
+        
+        # Show available regimes
+        old_supported = calculator.rule_provider.is_regime_supported(assessment_year, TaxRegimeType.OLD)
+        new_supported = calculator.rule_provider.is_regime_supported(assessment_year, TaxRegimeType.NEW)
+        
+        if old_supported or new_supported:
+            self._show_surcharge_rates(calculator, assessment_year)
+        else:
+            print(f"Assessment year {assessment_year} is not supported")
+    
 
 
 if __name__ == "__main__":

@@ -13,17 +13,10 @@ pdfplumber>=0.9.0         # Text-based PDF analysis
 
 # Data processing and validation
 numpy>=1.24.0             # Numerical operations
-openpyxl>=3.1.0           # Excel export capabilities
 python-dateutil>=2.8.0    # Date parsing and handling
 
-# Logging and monitoring
-structlog>=23.0.0         # Structured logging
-python-json-logger>=2.0.0 # JSON logging format
+# Terminal UI and progress bars
 rich>=13.0.0              # Beautiful terminal output and progress bars
-
-# Optional: ML-based text extraction (for future enhancement)
-spacy>=3.6.0              # NLP for text understanding
-transformers>=4.30.0      # For advanced text processing
 
 # Development dependencies
 black>=23.0.0             # Code formatting

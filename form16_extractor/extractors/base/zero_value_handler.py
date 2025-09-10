@@ -62,7 +62,7 @@ class ZeroValueHandler:
         
         # Fields that can legitimately be zero with high confidence
         self.zero_eligible_fields = {
-            # Salary components - many employees don't receive all allowances
+            # Salary components - many employees do not receive all allowances
             'overtime_allowance': {
                 'reason': ZeroValueReason.NO_ALLOWANCE,
                 'confidence': ZeroValueConfidence.PROBABLE,
@@ -445,7 +445,7 @@ class ZeroValueHandler:
         
         # Field-specific evidence
         if field == 'overtime_allowance' and context.get('employee_level') == 'senior_position':
-            evidence.append("Senior positions typically don't receive overtime")
+            evidence.append("Senior positions typically do not receive overtime")
         
         return evidence
     

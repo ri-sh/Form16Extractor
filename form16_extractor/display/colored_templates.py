@@ -46,7 +46,8 @@ class ColoredDisplayTemplates:
     {cls.BLUE}{cls.BOLD}EMPLOYEE DETAILS:{cls.RESET}
     {cls.WHITE}Name:{cls.RESET} {employee_info.get('name', 'N/A')}
     {cls.WHITE}PAN:{cls.RESET} {employee_info.get('pan', 'N/A')}
-    {cls.WHITE}Employer:{cls.RESET} {employee_info.get('employer', 'N/A')}"""
+    {cls.WHITE}Employer:{cls.RESET} {employee_info.get('employer', 'N/A')}
+    {cls.WHITE}Assessment Year:{cls.RESET} {employee_info.get('assessment_year', 'N/A')}"""
 
     @classmethod
     def render_income_breakdown(cls, section_17_1: float, section_17_2: float, total_salary: float) -> str:
@@ -166,6 +167,26 @@ class ColoredDisplayTemplates:
     • {cls.WHITE}Monthly Tax Savings:{cls.RESET} {cls.LIGHT_GREEN}Rs {savings/12:,.0f}{cls.RESET}
 """
 
+    @classmethod
+    def render_single_regime_message(cls, assessment_year: str) -> str:
+        """Render message for single regime (historical years)."""
+        return f"""
+{cls.YELLOW}{cls.BOLD}{'='*65}{cls.RESET}
+{cls.BG_BLUE}  TAX REGIME: Only OLD REGIME applicable for {assessment_year}        {cls.RESET}
+{cls.YELLOW}{cls.BOLD}{'='*65}{cls.RESET}
+
+    {cls.WHITE}Note:{cls.RESET} New tax regime was not available in {assessment_year}.
+    Only old tax regime rules apply for this assessment year."""
+
+    @classmethod
+    def render_single_regime_summary(cls, effective_rate: float) -> str:
+        """Render summary for single regime calculation."""
+        return f"""
+    {cls.BLUE}{cls.BOLD}TAX SUMMARY:{cls.RESET}
+    • {cls.WHITE}Effective Tax Rate:{cls.RESET} {effective_rate:.2f}%
+    • {cls.WHITE}Tax Regime:{cls.RESET} Old Regime (Only option for this year)
+"""
+
 
 class ColoredDisplayRenderer:
     """Main renderer class for colored tax calculation display."""
@@ -181,11 +202,22 @@ class ColoredDisplayRenderer:
         employee_info = tax_results.get('employee_info', {})
         financial_data = tax_results.get('financial_data', {})
         
+        # Check if new regime is actually calculated (has valid data)
+        new_regime_available = (new_regime and 
+                               'tax_liability' in new_regime and 
+                               new_regime.get('tax_liability') not in [float('inf'), None])
+        
         # Calculate key values
         old_tax = old_regime.get('tax_liability', float('inf'))
-        new_tax = new_regime.get('tax_liability', float('inf'))
-        better_regime = 'old' if old_tax < new_tax else 'new'
-        savings = abs(old_tax - new_tax)
+        new_tax = new_regime.get('tax_liability', float('inf')) if new_regime_available else float('inf')
+        
+        # Only compare if both regimes are available
+        if new_regime_available:
+            better_regime = 'old' if old_tax < new_tax else 'new'
+            savings = abs(old_tax - new_tax)
+        else:
+            better_regime = 'old'  # Only old regime available
+            savings = 0
         
         # Extract financial data
         section_17_1 = financial_data.get('section_17_1_salary', 0)
@@ -229,19 +261,25 @@ class ColoredDisplayRenderer:
             tax_due=old_tax_due
         ))
         
-        # New regime box
-        output.append(self.templates.render_new_regime_box(
-            is_winner=(better_regime == 'new'),
-            total_salary=total_salary,
-            section_80ccd_1b=section_80ccd_1b,
-            taxable_income=new_taxable,
-            tax_liability=new_tax,
-            tds_paid=total_tds,
-            refund_due=new_refund_due,
-            tax_due=new_tax_due
-        ))
-        
-        output.append(self.templates.render_recommendation(better_regime, savings))
-        output.append(self.templates.render_summary_metrics(old_effective, new_effective, savings))
+        # Only show new regime box if new regime is available
+        if new_regime_available:
+            # New regime box
+            output.append(self.templates.render_new_regime_box(
+                is_winner=(better_regime == 'new'),
+                total_salary=total_salary,
+                section_80ccd_1b=section_80ccd_1b,
+                taxable_income=new_taxable,
+                tax_liability=new_tax,
+                tds_paid=total_tds,
+                refund_due=new_refund_due,
+                tax_due=new_tax_due
+            ))
+            
+            output.append(self.templates.render_recommendation(better_regime, savings))
+            output.append(self.templates.render_summary_metrics(old_effective, new_effective, savings))
+        else:
+            # Show single regime message for historical years
+            output.append(self.templates.render_single_regime_message(employee_info.get('assessment_year', 'N/A')))
+            output.append(self.templates.render_single_regime_summary(old_effective))
         
         return '\n'.join(output)
