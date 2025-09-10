@@ -234,6 +234,46 @@ Examples:
             help="Run performance benchmarks"
         )
         
+        # Salary breakdown command
+        breakdown_parser = subparsers.add_parser(
+            "breakdown", help="Show detailed salary breakdown in tree structure"
+        )
+        breakdown_parser.add_argument(
+            "file", help="Path to Form16 PDF file"
+        )
+        breakdown_parser.add_argument(
+            "--format", choices=["tree", "table", "json"], default="tree",
+            help="Output format for salary breakdown"
+        )
+        breakdown_parser.add_argument(
+            "--show-percentages", action="store_true",
+            help="Show component percentages of gross salary"
+        )
+        breakdown_parser.add_argument(
+            "--output", "-o", type=Path,
+            help="Output file path (optional)"
+        )
+
+        # Tax optimization command
+        optimize_parser = subparsers.add_parser(
+            "optimize", help="Analyze tax optimization opportunities"
+        )
+        optimize_parser.add_argument(
+            "file", help="Path to Form16 PDF file"
+        )
+        optimize_parser.add_argument(
+            "--suggestions-only", action="store_true",
+            help="Show only optimization suggestions without current breakdown"
+        )
+        optimize_parser.add_argument(
+            "--target-savings", type=int,
+            help="Target tax savings amount to achieve (in rupees)"
+        )
+        optimize_parser.add_argument(
+            "--interactive", "-i", action="store_true",
+            help="Interactive mode with step-by-step recommendations"
+        )
+
         # Info command
         info_parser = subparsers.add_parser(
             "info", help="Show information about supported years and tax rules"
@@ -252,7 +292,7 @@ Examples:
         )
         
         # Common arguments
-        for subparser in [extract_parser, batch_parser, consolidate_parser, validate_parser, test_parser, info_parser]:
+        for subparser in [extract_parser, batch_parser, consolidate_parser, validate_parser, test_parser, breakdown_parser, optimize_parser, info_parser]:
             subparser.add_argument(
                 "--verbose", "-v", action="store_true",
                 help="Enable verbose logging"
@@ -543,7 +583,7 @@ Examples:
                     if args.strict:
                         return 1
                 else:
-                    print(f"✅ Found section: {section}")
+                    print(f"Found section: {section}")
             
             # Validate key fields
             part_a = form16_data.get('part_a', {})
@@ -551,38 +591,38 @@ Examples:
             employer = part_a.get('employer', {})
             
             if employee.get('name'):
-                print(f"✅ Employee name: {employee['name']}")
+                print(f"Employee name: {employee['name']}")
             else:
-                print("⚠️  Warning: Employee name missing")
+                print("Warning: Employee name missing")
                 
             if employee.get('pan'):
-                print(f"✅ Employee PAN: {employee['pan']}")
+                print(f"Employee PAN: {employee['pan']}")
             else:
-                print("⚠️  Warning: Employee PAN missing")
+                print("Warning: Employee PAN missing")
                 
             if employer.get('name'):
-                print(f"✅ Employer: {employer['name']}")
+                print(f"Employer: {employer['name']}")
             else:
-                print("⚠️  Warning: Employer name missing")
+                print("Warning: Employer name missing")
             
             part_b = form16_data.get('part_b', {})
             gross_salary = part_b.get('gross_salary', {})
             if gross_salary.get('total'):
-                print(f"✅ Gross Salary: ₹{gross_salary['total']:,.0f}")
+                print(f"Gross Salary: ₹{gross_salary['total']:,.0f}")
             else:
-                print("⚠️  Warning: Gross salary missing")
+                print("Warning: Gross salary missing")
             
             # Check extraction metrics
             if 'extraction_metrics' in data:
                 summary = data['extraction_metrics']['extraction_summary']
                 rate = summary.get('extraction_rate', 0)
-                print(f"📊 Extraction rate: {rate:.1f}% ({summary['extracted_fields']}/{summary['total_fields']} fields)")
+                print(f"Extraction rate: {rate:.1f}% ({summary['extracted_fields']}/{summary['total_fields']} fields)")
                 
                 if rate < 50 and args.strict:
                     print("Extraction rate too low for strict mode")
                     return 1
             
-            print("✅ Validation passed!")
+            print("Validation passed!")
             return 0
             
         except Exception as e:
@@ -845,7 +885,13 @@ Examples:
             # Display tax results after progress is complete
             if args.calculate_tax and 'tax_calculations' in result:
                 print("\n")  # Add some spacing after progress
-                self._display_dummy_tax_results(result['tax_calculations'], args.tax_regime, hasattr(args, 'display_mode') and args.display_mode == 'colored')
+                # Use the same colored display as normal mode for consistency
+                if hasattr(args, 'display_mode') and args.display_mode == 'colored':
+                    self._display_colored_regime_components(result['tax_calculations'], args.tax_regime)
+                elif hasattr(args, 'summary') and args.summary:
+                    self._display_detailed_tax_breakdown(result['tax_calculations'], args.tax_regime)
+                else:
+                    self._display_dummy_tax_results(result['tax_calculations'], args.tax_regime, False)
             
             # Save result if output is specified
             if args.output or args.out_dir:
@@ -1629,6 +1675,16 @@ Examples:
         parser = self.create_parser()
         args = parser.parse_args()
         
+        # Show professional CLI logo before processing (except for info/help commands)
+        if args.command and args.command not in ['info']:
+            from .display.cli_ascii_art import CLIAsciiArt
+            cli_art = CLIAsciiArt()
+            
+            # Show logo with command header
+            cli_art.display_startup_logo(option=1, show_tagline=True)  # Using Option 1 by default
+            cli_art.display_command_header(args.command, self._get_command_description(args.command))
+            cli_art.display_processing_separator()
+        
         # Configure logging
         if args.verbose:
             logging.basicConfig(level=logging.DEBUG)
@@ -1655,11 +1711,29 @@ Examples:
             return self.validate_results(args)
         elif args.command == "test":
             return self.run_tests(args)
+        elif args.command == "breakdown":
+            return self.show_salary_breakdown(args)
+        elif args.command == "optimize":
+            return self.show_tax_optimization(args)
         elif args.command == "info":
             return self.show_info(args)
         else:
             print(f"Unknown command: {args.command}")
             return 1
+    
+    def _get_command_description(self, command: str) -> str:
+        """Get description for command headers"""
+        descriptions = {
+            'extract': 'Extract structured data from Form16 PDF documents',
+            'batch': 'Process multiple Form16 files in parallel',
+            'consolidate': 'Combine multiple Form16s from different employers',
+            'validate': 'Validate extracted Form16 data for accuracy',
+            'test': 'Run system tests and performance benchmarks',
+            'breakdown': 'Analyze salary components with detailed breakdown',
+            'optimize': 'Discover tax optimization opportunities and savings',
+            'info': 'System information and supported features'
+        }
+        return descriptions.get(command, 'Form16 processing operation')
 
     def _extract_section_80c_display(self, form16_result):
         """Extract Section 80C deduction amount for display."""
@@ -1914,6 +1988,295 @@ Examples:
         else:
             print(f"Assessment year {assessment_year} is not supported")
     
+
+
+    def show_salary_breakdown(self, args) -> int:
+        """Show detailed salary breakdown in tree structure"""
+        try:
+            from .display.rich_ui_components import RichUIComponents
+            from .analyzers.salary_breakdown_analyzer import SalaryBreakdownAnalyzer
+            import json
+            import tempfile
+            
+            ui = RichUIComponents()
+            analyzer = SalaryBreakdownAnalyzer()
+            
+            # Show header
+            ui.show_animated_header(
+                "Salary Breakdown Analysis",
+                "Detailed component-wise breakdown of your salary structure"
+            )
+            
+            # Handle dummy mode
+            if args.dummy:
+                ui.show_loading_animation("Analyzing salary components", 1.5)
+                breakdown = analyzer.create_dummy_breakdown("medium")
+            else:
+                # Extract Form16 data first
+                ui.show_loading_animation("Processing Form16 document", 2.0)
+                
+                try:
+                    # Extract basic Form16 data
+                    file_path = Path(args.file)
+                    extraction_result = self.pdf_processor.extract_tables(file_path)
+                    form16_result = self.extractor.extract_all(extraction_result.tables)
+                    
+                    if not form16_result:
+                        ui.display_error_message("Failed to extract data from Form16")
+                        return 1
+                    
+                    # Convert to JSON format for analyzer
+                    json_builder = Form16JSONBuilder()
+                    form16_json = json_builder.build_comprehensive_json(
+                        form16_result, 
+                        file_path.name, 
+                        0.0, 
+                        {}
+                    )
+                    
+                    # Analyze salary breakdown
+                    breakdown = analyzer.analyze_form16_salary(form16_json)
+                    
+                except Exception as e:
+                    ui.display_error_message(f"Failed to process Form16: {str(e)}")
+                    return 1
+            
+            # Create salary data dict for tree display
+            salary_data = {
+                'gross_salary': float(breakdown.gross_salary),
+                'section_17_1_salary': sum(float(c.amount) for c in breakdown.components if c.type.value == 'basic_salary'),
+                'hra_received': sum(float(c.amount) for c in breakdown.components if c.type.value == 'hra' and c.amount > 0),
+                'section_17_2_perquisites': sum(float(c.amount) for c in breakdown.components if c.type.value == 'perquisites'),
+                'section_17_3_profits_in_lieu': sum(float(c.amount) for c in breakdown.components if c.type.value == 'profits_in_lieu'),
+                'total_tds': float(breakdown.total_tds)
+            }
+            
+            if args.format == "tree":
+                tree = ui.create_salary_tree(salary_data, args.show_percentages)
+                ui.console.print("\n")
+                ui.console.print(tree)
+                
+                # Show summary
+                ui.console.print(f"\n[bold cyan]Summary for {breakdown.employee_name}[/bold cyan]")
+                ui.console.print(f"Employer: {breakdown.employer_name}")
+                ui.console.print(f"Assessment Year: {breakdown.assessment_year}")
+                
+            return 0
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return 1
+    
+    def show_tax_optimization(self, args) -> int:
+        """Show tax optimization analysis and suggestions"""
+        try:
+            from .display.rich_ui_components import RichUIComponents
+            from .analyzers.tax_optimization_engine import TaxOptimizationEngine
+            from .api.tax_calculation_api import TaxCalculationAPI, TaxRegime
+            
+            ui = RichUIComponents()
+            optimizer = TaxOptimizationEngine()
+            
+            # Show header
+            ui.show_animated_header(
+                "Tax Optimization Analysis",
+                "Discover opportunities to reduce your tax liability legally"
+            )
+            
+            # Handle dummy mode
+            if args.dummy:
+                ui.show_loading_animation("Analyzing tax optimization opportunities", 2.0)
+                analysis = optimizer.create_dummy_optimization_analysis("medium")
+            else:
+                # Extract and calculate tax from Form16
+                ui.show_loading_animation("Processing Form16 and calculating taxes", 3.0)
+                
+                # Use the same tax calculation method as extract command
+                file_path = Path(args.file)
+                extraction_result = self.pdf_processor.extract_tables(file_path)
+                form16_result = self.extractor.extract_all(extraction_result.tables)
+                
+                if not form16_result:
+                    ui.display_error_message("Failed to extract data from Form16")
+                    return 1
+                
+                # Calculate tax using the same method as extract command
+                tax_results = self._calculate_form16_based_tax(form16_result, args)
+                if not tax_results:
+                    ui.display_error_message("Tax calculation failed")
+                    return 1
+                
+                # Create result structure like extract command
+                result = {
+                    'tax_calculations': tax_results
+                }
+                
+                # Convert to JSON format for analyzer (same as breakdown command)  
+                json_builder = Form16JSONBuilder()
+                form16_json = json_builder.build_comprehensive_json(
+                    form16_result, 
+                    file_path.name, 
+                    0.0, 
+                    {}
+                )
+                
+                # Use the tax calculation result for optimization analysis  
+                analysis = optimizer.analyze_optimization_opportunities(
+                    tax_results, form16_json, args.target_savings
+                )
+            
+            # Show current tax situation first (if not dummy mode)
+            if not args.dummy:
+                # First, extract and show salary breakdown like breakdown command
+                from .analyzers.salary_breakdown_analyzer import SalaryBreakdownAnalyzer
+                
+                ui.console.print("\n[bold blue]═══════════════════════════════════════════════════════════════════════════════[/bold blue]")
+                ui.console.print("[bold blue]                           Salary Breakdown Analysis                           [/bold blue]")
+                ui.console.print("[bold blue]═══════════════════════════════════════════════════════════════════════════════[/bold blue]")
+                
+                # Use the Form16 data that was already extracted above
+                try:
+                    salary_analyzer = SalaryBreakdownAnalyzer()
+                    
+                    # Use the form16_json that was already created above
+                    if form16_json:
+                        # Analyze salary breakdown using existing data
+                        breakdown = salary_analyzer.analyze_form16_salary(form16_json)
+                        
+                        # Extract values for display
+                        employee_name = breakdown.employee_name
+                        gross_salary = float(breakdown.gross_salary)
+                        total_tds = float(breakdown.total_tds)
+                        net_salary = gross_salary - total_tds if gross_salary > 0 else 0
+                        
+                        # Get component breakdown from Form16 data directly
+                        part_b = form16_json.get('form16', {}).get('part_b', {})
+                        gross_salary_data = part_b.get('gross_salary', {})
+                        section_17_1 = gross_salary_data.get('section_17_1_salary', 0) or 0
+                        section_17_2 = gross_salary_data.get('section_17_2_perquisites', 0) or 0
+                        
+                        # If analyzer found different values, use those
+                        if gross_salary > 0:
+                            section_17_1 = section_17_1 if section_17_1 > 0 else gross_salary
+                        
+                        # Show salary breakdown tree
+                        ui.console.print(f"\n[bold green]Salary Structure for {employee_name}:[/bold green]")
+                        ui.console.print(f"[bold cyan]Total Gross Salary: ₹{gross_salary:,.0f}[/bold cyan]")
+                        ui.console.print("├── Basic Salary Components")
+                        # Safely handle percentage calculations to avoid NaN
+                        basic_pct = (section_17_1/gross_salary*100) if gross_salary > 0 else 0
+                        perq_pct = (section_17_2/gross_salary*100) if gross_salary > 0 else 0
+                        tds_pct = (total_tds/gross_salary*100) if gross_salary > 0 else 0
+                        net_pct = (net_salary/gross_salary*100) if gross_salary > 0 else 0
+                        
+                        ui.console.print(f"│   ├── Basic Salary: ₹{section_17_1:,.0f} ({basic_pct:.1f}%)" if gross_salary > 0 else f"│   ├── Basic Salary: ₹{section_17_1:,.0f}")
+                        if section_17_2 > 0:
+                            ui.console.print(f"│   └── Perquisites: ₹{section_17_2:,.0f} ({perq_pct:.1f}%)" if gross_salary > 0 else f"│   └── Perquisites: ₹{section_17_2:,.0f}")
+                        ui.console.print("└── Tax Deductions")
+                        ui.console.print(f"    ├── Total TDS: ₹{total_tds:,.0f} ({tds_pct:.1f}%)" if gross_salary > 0 else f"    ├── Total TDS: ₹{total_tds:,.0f}")
+                        ui.console.print(f"    └── Net Take-Home Salary: ₹{net_salary:,.0f} ({net_pct:.1f}%)" if gross_salary > 0 else f"    └── Net Take-Home Salary: ₹{net_salary:,.0f}")
+                    else:
+                        ui.console.print("[yellow]Note: Could not extract Form16 data for salary breakdown[/yellow]")
+                        
+                except Exception as e:
+                    ui.console.print(f"[yellow]Note: Could not extract detailed salary breakdown ({str(e)})[/yellow]")
+                
+                ui.console.print("\n[bold blue]═══════════════════════════════════════════════════════════════════════════════[/bold blue]")
+                ui.console.print("[bold blue]                        Current Tax Situation Analysis                        [/bold blue]")
+                ui.console.print("[bold blue]═══════════════════════════════════════════════════════════════════════════════[/bold blue]")
+                
+                # Use the same tax calculation structure as extract command
+                # Get tax calculation results in the same format as extract command
+                tax_calculations = result.get('tax_calculations', {})
+                regime_comparison = tax_calculations.get('regime_comparison', {})
+                old_regime = regime_comparison.get('old_regime', {})
+                new_regime = regime_comparison.get('new_regime', {})
+                recommended_regime = tax_calculations.get('recommended_regime', 'new')
+                tax_savings = tax_calculations.get('tax_savings', 0)
+                
+                # Handle edge cases and NaN values
+                if tax_savings is None or str(tax_savings).lower() in ['nan', 'inf']:
+                    tax_savings = 0
+                
+                # Get correct tax values from regime comparison
+                if recommended_regime == 'old':
+                    current_tax = old_regime.get('tax_liability', 0)
+                    current_deductions = old_regime.get('deductions_used', {})
+                    current_taxable_income = old_regime.get('taxable_income', 0)
+                else:
+                    current_tax = new_regime.get('tax_liability', 0)
+                    current_deductions = new_regime.get('deductions_used', {})
+                    current_taxable_income = new_regime.get('taxable_income', 0)
+                
+                # Current situation
+                ui.console.print(f"\n[cyan]Your Current Tax Profile:[/cyan]")
+                ui.console.print(f"• Currently using: [yellow]{recommended_regime.upper()} regime[/yellow]")
+                ui.console.print(f"• Taxable income: [blue]₹{current_taxable_income:,.0f}[/blue]")
+                ui.console.print(f"• Current tax liability: [red]₹{current_tax:,.0f}[/red]")
+                ui.console.print(f"• Annual savings from regime choice: [green]₹{tax_savings:,.0f}[/green]")
+                
+                # Show current deductions
+                if current_deductions:
+                    ui.console.print(f"\n[cyan]Current Deductions You're Using:[/cyan]")
+                    for section, amount in current_deductions.items():
+                        if amount > 0:
+                            ui.console.print(f"  • {section}: [green]₹{amount:,.0f}[/green]")
+                
+                # Regime switching recommendation
+                ui.console.print(f"\n[bold green]Regime Recommendation:[/bold green]")
+                if tax_savings > 0:
+                    alternative_regime = 'new' if recommended_regime == 'old' else 'old'
+                    ui.console.print(f"You're already using the [green]optimal {recommended_regime.upper()} regime[/green]")
+                    ui.console.print(f"   Switching to {alternative_regime.upper()} regime would [red]cost you ₹{tax_savings:,.0f} more[/red]")
+                else:
+                    ui.console.print("Both regimes result in similar tax liability for your income level")
+            
+            # Show optimization suggestions
+            if analysis.suggestions:
+                from rich.table import Table
+                
+                ui.console.print(f"\n[bold magenta]Additional Optimization Opportunities:[/bold magenta]")
+                suggestions_table = Table(title="Tax Optimization Opportunities")
+                suggestions_table.add_column("Opportunity", style="cyan")
+                suggestions_table.add_column("Investment", justify="right", style="green")
+                suggestions_table.add_column("Tax Savings", justify="right", style="bright_green")
+                suggestions_table.add_column("ROI", justify="right", style="yellow")
+                suggestions_table.add_column("Difficulty", justify="center")
+                
+                for suggestion in analysis.suggestions[:5]:  # Show top 5
+                    difficulty_color = {
+                        'easy': '[green]Easy[/green]',
+                        'moderate': '[yellow]Moderate[/yellow]',
+                        'difficult': '[red]Difficult[/red]'
+                    }.get(suggestion.difficulty.value, '[yellow]Moderate[/yellow]')
+                    
+                    suggestions_table.add_row(
+                        suggestion.title,
+                        f"₹{float(suggestion.suggested_amount):,.0f}",
+                        f"₹{float(suggestion.potential_tax_savings):,.0f}",
+                        f"{suggestion.roi_percentage:.1f}%",
+                        difficulty_color
+                    )
+                
+                ui.console.print(suggestions_table)
+                
+                # Enhanced summary
+                additional_savings = float(analysis.potential_total_savings)
+                if not args.dummy:
+                    total_possible_savings = tax_savings + additional_savings
+                    ui.console.print(f"\n[bold green]Total Tax Optimization Summary:[/bold green]")
+                    ui.console.print(f"• Current regime savings: [green]₹{tax_savings:,.0f}[/green]")
+                    ui.console.print(f"• Additional optimization potential: [green]₹{additional_savings:,.0f}[/green]")
+                    ui.console.print(f"• [bold magenta]Total possible annual savings: ₹{total_possible_savings:,.0f}[/bold magenta]")
+                    ui.console.print(f"• [bold cyan]Monthly savings potential: ₹{total_possible_savings/12:,.0f}[/bold cyan]")
+                else:
+                    ui.console.print(f"\n[bold magenta]Total Potential Annual Savings: ₹{additional_savings:,.0f}[/bold magenta]")
+            
+            return 0
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return 1
 
 
 def main():

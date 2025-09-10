@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "form16-parser"
-version = "1.0.0"
+name = "form16x"
+version = "2.0.0"
 description = "A robust Python library for extracting structured data from Indian Form16 tax documents"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Test User", email = "dev@example.com"},
 ]
@@ -34,7 +34,6 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Accounting",
     "Topic :: Text Processing :: Indexing",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",

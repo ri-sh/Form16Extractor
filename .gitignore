@@ -185,3 +185,7 @@ fix_*.py
 
 # API example files - don't commit
 api_example*.py
+
+# TDS analysis and refund guides
+TDS_REFUND_ANALYSIS_GUIDE.md
+tds_refund_*.py

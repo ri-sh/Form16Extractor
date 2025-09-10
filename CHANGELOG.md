@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-09-10
+
+### Added
+
+#### Salary Breakdown Analysis (NEW)
+- **Interactive Salary Breakdown Command**: New `form16x breakdown` command providing detailed salary component analysis
+- **Tree Structure Visualization**: Professional tree-like display showing gross salary breakdown into individual components
+- **Component Classification**: Automatic classification of salary components (Basic, HRA, Special Allowance, Transport, etc.)
+- **Taxable vs Non-Taxable Separation**: Clear distinction between taxable income and exempt allowances
+- **Percentage Analysis**: Optional `--show-percentages` flag showing component percentage of gross salary
+- **Professional Display Options**: Rich terminal formatting with clean, structured output
+
+#### Tax Optimization Engine (NEW)
+- **Comprehensive Tax Optimization Command**: New `form16x optimize` command providing actionable tax-saving suggestions
+- **Multi-Section Analysis**: Detailed analysis of all major tax-saving sections (80C, 80D, 80CCD(1B), 80TTA, 80EE, 80EEA)
+- **ROI-Based Recommendations**: Investment suggestions ranked by Return on Investment and ease of implementation
+- **Regime-Specific Advice**: Tailored recommendations based on current tax regime (Old vs New)
+- **Implementation Guidance**: Step-by-step instructions for each tax-saving recommendation
+- **Current vs Optimized Comparison**: Side-by-side comparison showing current tax liability vs optimized scenario
+- **Difficulty-Based Prioritization**: Suggestions categorized by implementation difficulty (Easy, Moderate, Difficult)
+- **Target-Based Optimization**: Optional target savings amount for focused recommendations
+
+#### Enhanced CLI User Experience
+- **Rich Terminal Components**: Professional CLI interface using Rich library for enhanced visual appeal
+- **Colored Progress Indicators**: Beautiful progress bars and spinners for long-running operations
+- **ASCII Art Integration**: Professional ASCII art headers for brand recognition
+- **Tree Structure Display**: Clean hierarchical display for salary components and tax breakdowns
+- **Professional Formatting**: Consistent formatting with proper currency symbols and number formatting
+- **Interactive Elements**: User-friendly command structure with clear help text and examples
+
+#### Advanced Analysis Models
+- **Salary Breakdown Data Models**: Comprehensive Pydantic models for salary component analysis
+- **Tax Optimization Models**: Structured models for tax-saving suggestions and analysis results
+- **Component Classification System**: Enumerated types for different salary and allowance components
+- **Optimization Difficulty Levels**: Standardized difficulty classification for tax-saving recommendations
+- **Financial Analysis Calculations**: Built-in ROI calculations and savings projections
+
+### Enhanced Features
+
+#### Form16 Data Extraction Improvements
+- **Multi-Path Name Extraction**: Enhanced employee/employer name extraction checking multiple JSON paths
+- **Robust Data Fallbacks**: Improved fallback mechanisms for missing or incomplete Form16 data
+- **Better Error Handling**: Enhanced error messages and graceful degradation for malformed data
+- **Demo Mode Enhancements**: Improved demo data generation with realistic financial scenarios
+
+#### CLI Architecture Improvements
+- **Command Modularization**: Better separation of concerns between different CLI commands
+- **Consistent Tax Calculation**: Unified tax calculation engine used across extract and optimize commands
+- **Professional Output Consistency**: Standardized formatting across all command outputs
+- **Enhanced Help System**: Improved help text and command documentation
+
+### Fixed
+
+#### Critical Bug Fixes
+- **Employee/Employer Name Extraction**: Fixed "Unknown Employee/Employer" issue by implementing multi-path extraction strategy
+- **PyPDF2 Deprecation**: Updated from deprecated `PdfFileReader` to modern `PdfReader` API
+- **Tax Calculation Consistency**: Fixed discrepancies between extract and optimize commands
+- **Demo Mode Data Display**: Fixed demo mode showing N/A values instead of proper financial data
+- **Package Installation**: Resolved `pip install -e .` conflicts by removing conflicting setup.py
+
+#### Package Management
+- **Modern Python Packaging**: Fully migrated to pyproject.toml-only configuration
+- **Setup.py Removal**: Eliminated setup.py to resolve package installation conflicts
+- **Dependency Management**: Cleaned up dependency specifications in pyproject.toml
+- **Build System Optimization**: Streamlined build configuration for modern pip versions
+
+#### Display and Formatting
+- **Currency Symbol Consistency**: Standardized ₹ symbol usage across all outputs
+- **Professional Language**: Removed informal language and emojis for professional presentation
+- **Number Formatting**: Consistent number formatting with proper thousand separators
+- **Tree Structure Alignment**: Perfect alignment for tree structure displays
+
+### Technical Implementation
+
+#### Architecture Enhancements
+- **Analyzer Package**: New `form16_parser.analyzers` package for financial analysis components
+- **Display Components**: Dedicated `form16_parser.display` package for Rich UI components
+- **Model Extensions**: Extended data models package with salary and optimization analysis models
+- **Engine Architecture**: Modular tax optimization engine with pluggable recommendation strategies
+
+#### Code Quality Improvements
+- **Type Safety**: Full type hints throughout new analysis and optimization components
+- **Error Resilience**: Comprehensive error handling with graceful fallbacks
+- **Memory Efficiency**: Optimized data structures for large-scale analysis operations
+- **Documentation**: Professional docstrings and inline documentation for all new components
+
+#### Developer Experience
+- **Clean API Design**: Intuitive public APIs for salary breakdown and tax optimization
+- **Testable Architecture**: Modular design enabling comprehensive unit testing
+- **Configuration Management**: Flexible configuration system for different analysis scenarios
+- **Professional Standards**: Code follows professional development standards and patterns
+
+### Migration Notes
+- **Backward Compatibility**: All existing commands remain fully functional
+- **New Command Usage**: `form16x breakdown file.pdf` and `form16x optimize file.pdf`
+- **Enhanced Features**: Existing users gain access to new analysis capabilities
+- **No Breaking Changes**: Existing integrations continue to work without modification
+
 ## [2.1.0] - 2025-09-09
 
 ### Added

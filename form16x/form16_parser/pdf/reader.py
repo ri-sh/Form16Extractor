@@ -474,11 +474,12 @@ class RobustPDFProcessor(IPDFProcessor):
             text_content = []
             
             with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfFileReader(file)
+                # Use PdfReader instead of deprecated PdfFileReader
+                pdf_reader = PyPDF2.PdfReader(file)
                 
-                for page_num in range(pdf_reader.numPages):
-                    page = pdf_reader.getPage(page_num)
-                    page_text = page.extractText()
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    page_text = page.extract_text()
                     if page_text:
                         text_content.append(page_text)
             

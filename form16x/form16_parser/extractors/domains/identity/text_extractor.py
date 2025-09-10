@@ -119,14 +119,14 @@ class IdentityTextExtractor:
         
         results = {}
         
-        # Common colon-separated patterns in Form 16
+        # Common colon-separated patterns in Form 16 - Be specific to avoid false matches
         colon_patterns = {
-            'employee_name': ['Employee Name', 'Name of the Employee', 'Employee'],
-            'employee_pan': ['Employee PAN', 'PAN of Employee'],
-            'employee_address': ['Employee Address', 'Address of Employee'],
-            'employer_name': ['Name of the Employer', 'Employer Name', 'Employer'],
-            'employer_tan': ['TAN', 'TAN Number'],
-            'employer_pan': ['Employer PAN', 'PAN of Employer'],
+            'employee_name': ['Employee Name', 'Name of the Employee', 'Employee Full Name'],
+            'employee_pan': ['Employee PAN', 'PAN of Employee', 'PAN of the Employee'],
+            'employee_address': ['Employee Address', 'Address of Employee', 'Address of the Employee'],
+            'employer_name': ['Name of the Employer', 'Employer Name', 'Name of Employer'],
+            'employer_tan': ['TAN', 'TAN Number', 'TAN of the Employer', 'TAN of Employer'],
+            'employer_pan': ['Employer PAN', 'PAN of Employer', 'PAN of the Employer'],
             'assessment_year': ['Assessment Year', 'A.Y.'],
             'financial_year': ['Financial Year', 'F.Y.'],
         }
@@ -161,7 +161,7 @@ class IdentityTextExtractor:
     
     def _fuzzy_match(self, text: str, pattern: str, threshold: float = 0.8) -> bool:
         """
-        Check if text fuzzy matches pattern
+        Check if text fuzzy matches pattern - with stricter matching to avoid false positives
         
         Args:
             text: Text to match
@@ -179,18 +179,24 @@ class IdentityTextExtractor:
         if text_norm == pattern_norm:
             return True
         
+        # For employee vs employer patterns, be more strict to avoid cross-matching
+        if 'employee' in pattern_norm and 'employer' in text_norm:
+            return False
+        if 'employer' in pattern_norm and 'employee' in text_norm:
+            return False
+            
         # Contains match
         if pattern_norm in text_norm or text_norm in pattern_norm:
             return True
         
-        # Word overlap for multi-word patterns
+        # Word overlap for multi-word patterns - be more strict
         if ' ' in pattern_norm:
             pattern_words = set(pattern_norm.split())
             text_words = set(text_norm.split())
             
-            # Check if most pattern words are in text
+            # Check if ALL pattern words are in text (stricter matching)
             overlap = len(pattern_words.intersection(text_words))
-            if overlap / len(pattern_words) >= threshold:
+            if overlap == len(pattern_words):  # All pattern words must be present
                 return True
         
         return False
@@ -219,6 +225,8 @@ class IdentityTextExtractor:
             'employee_name': [
                 'employee name',
                 'name of the employee', 
+                'name and address of the employee',
+                'name and address of employee',
                 'full name',
                 'emp name',
                 'employee full name'
@@ -226,17 +234,21 @@ class IdentityTextExtractor:
             'employee_pan': [
                 'employee pan',
                 'pan of employee',
+                'pan of the employee',
                 'emp pan',
                 'employee permanent account number'
             ],
             'employee_address': [
                 'employee address',
                 'address of employee',
+                'address of the employee', 
                 'emp address',
                 'employee residential address'
             ],
             'employer_name': [
                 'name of the employer',
+                'name and address of the employer',
+                'name and address of employer',
                 'employer name',
                 'name of employer',
                 'company name'
@@ -278,6 +290,7 @@ class IdentityTextExtractor:
                     context_window.pop(0)
                 continue
             
+            
             # Handle multi-line key-value patterns where key is on one line and value on the next
             if ':' not in line:
                 # Check if this line could be a key for next line's value
@@ -288,6 +301,7 @@ class IdentityTextExtractor:
                     
                     for pattern in patterns:
                         if self._line_matches_pattern(line_lower, pattern):
+                            self.logger.debug(f"Found pattern match for {field_name}: '{line}' matches '{pattern}'")
                             # Look for value in next line
                             if i + 1 < len(lines):
                                 next_line = lines[i + 1].strip()
@@ -310,8 +324,8 @@ class IdentityTextExtractor:
                                             context_text = ' '.join([ctx_line for _, ctx_line in context_window[-5:]])
                                             context_score = self._calculate_name_priority_score(context_text, cleaned_value)
                                             
-                                            # Only accept if context score is positive
-                                            if context_score > 0:
+                                            # Accept valid names with reasonable context scores
+                                            if context_score > -5:
                                                 results[field_name] = cleaned_value
                                                 self.logger.debug(f"Multi-line found {field_name}: {cleaned_value} (score: {context_score})")
                                             else:
@@ -338,9 +352,17 @@ class IdentityTextExtractor:
             key_part = line[:colon_pos].strip()
             value_part = line[colon_pos + 1:].strip()
             
-            # Skip if no value or invalid value
+            # If no value on same line, check next line
             if not value_part or value_part.lower() in ['none', '', 'null', '-', 'n/a']:
-                continue
+                # Check if value is on next line
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if next_line and next_line.lower() not in ['none', '', 'null', '-', 'n/a']:
+                        value_part = next_line
+                    else:
+                        continue
+                else:
+                    continue
             
             key_lower = key_part.lower()
             
@@ -360,8 +382,8 @@ class IdentityTextExtractor:
                                 context_text = ' '.join([ctx_line for _, ctx_line in context_window[-5:]])  # Last 5 lines
                                 context_score = self._calculate_name_priority_score(context_text, cleaned_value)
                                 
-                                # Only accept if context score is positive (employee section)
-                                if context_score > 0:
+                                # Accept valid names with reasonable context scores
+                                if context_score > -5:
                                     results[field_name] = cleaned_value
                                     self.logger.debug(f"Line-by-line found {field_name}: {cleaned_value} (score: {context_score})")
                                 else:

@@ -66,21 +66,41 @@ ln -s "$(brew --prefix gs)/lib/libgs.dylib" ~/lib
 - Install [Ghostscript](https://www.ghostscript.com/download/gsdnld.html)
 - Install [ActiveTcl Community Edition](https://www.activestate.com/products/tcl/)
 
-### Install Form16 Extractor
+### Install Form16x
 
+**Option 1: Install from PyPI (Recommended - Once published)**
+```bash
+pip install form16x
+
+# Now use the form16x command
+form16x extract json path/to/Form16.pdf --calculate-tax
+```
+
+**Option 2: Install from Source (Current method)**
 ```bash
 git clone https://github.com/ri-sh/form16x.git
 cd form16x
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Upgrade pip to latest version (required for modern pyproject.toml support)
+python -m pip install --upgrade pip
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Option 1: Install as package for taxedo command (RECOMMENDED)
+# Install as package for form16x command (requires pip >= 21.3)
 pip install -e .
 
 # Now use the form16x command
 form16x extract json path/to/Form16.pdf --calculate-tax
+```
 
-# Option 2: Use directly with Python (legacy)
-form16x extract --file path/to/Form16.pdf --output result.json
+**Important:** If you get "setup.py not found" error, your pip version is too old. Upgrade pip:
+```bash
+python -m pip install --upgrade pip  # Requires pip >= 21.3 for pyproject.toml support
 ```
 
 **Note:** If you encounter issues with camelot installation, see the [official camelot-py installation guide](https://camelot-py.readthedocs.io/en/master/user/install-deps.html).
@@ -120,15 +140,88 @@ form16x extract json form16_sample.pdf --calculate-tax --other-income 50000
 # Tax calculation for senior citizens (60-80 years)
 form16x extract json form16_sample.pdf --calculate-tax --age-category senior_60_to_80
 
-# Additional examples with form16x command
+# NEW: Detailed salary breakdown analysis
+form16x breakdown form16_sample.pdf --show-percentages
+
+# NEW: Tax optimization recommendations
+form16x optimize form16_sample.pdf --target-savings 50000
+
 # Extract to CSV format
 form16x extract csv form16_sample.pdf --output data.csv
 
 # Get help and supported assessment years
 form16x --help
 form16x info
+```
 
+---
 
+## New Commands (v2.2.0)
+
+### Salary Breakdown Analysis
+
+Get detailed salary component analysis with tree structure visualization:
+
+```bash
+# Basic salary breakdown
+form16x breakdown path/to/Form16.pdf
+
+# With percentage analysis
+form16x breakdown path/to/Form16.pdf --show-percentages
+
+# Demo mode for testing
+form16x breakdown --demo
+```
+
+**Features:**
+- Tree structure visualization of salary components
+- Classification of Basic, HRA, Special Allowance, Transport, etc.
+- Taxable vs non-taxable component separation
+- Optional percentage analysis showing component distribution
+- Rich terminal formatting with professional display
+
+### Tax Optimization Engine
+
+Get actionable tax-saving recommendations:
+
+```bash
+# Basic tax optimization analysis
+form16x optimize path/to/Form16.pdf
+
+# Target-based optimization (specify savings goal)
+form16x optimize path/to/Form16.pdf --target-savings 50000
+
+# Demo mode for testing
+form16x optimize --demo
+```
+
+**Features:**
+- Comprehensive analysis of tax-saving sections (80C, 80D, 80CCD(1B), 80TTA, etc.)
+- ROI-based investment recommendations
+- Regime-specific advice (Old vs New tax regime)
+- Step-by-step implementation guidance
+- Current vs optimized tax comparison
+- Difficulty-based prioritization (Easy, Moderate, Difficult)
+- Real savings calculations with exact amounts
+
+**Sample Output:**
+```
+Your Current Tax Profile:
+• Currently using: NEW regime
+• Taxable income: ₹8,62,724
+• Current tax liability: ₹78,723
+
+Top Tax-Saving Recommendations:
+
+1. Public Provident Fund Investment
+   Section: 80C | Potential Savings: ₹20,000 | ROI: 20.00%
+   Investment: ₹1,00,000
+   Steps: Open PPF account → Set up monthly SIP → Invest before March 31st
+
+2. Health Insurance Premium  
+   Section: 80D | Potential Savings: ₹5,000 | ROI: 20.00%
+   Investment: ₹25,000
+   Steps: Compare plans → Choose family coverage → Pay premium before March 31st
 ```
 
 ---
@@ -204,6 +297,145 @@ result = api.calculate_tax_from_input(
 
 print(result['recommendation'])  # e.g., "NEW regime saves ₹25,000 annually"
 ```
+
+### Complete Tax Calculation Example for 2024-25
+
+Here's a comprehensive example showing how to calculate tax for the 2024-25 assessment year with all major income sources and deductions:
+
+```python
+from form16x.form16_parser.api.tax_calculation_api import TaxCalculationAPI, TaxRegime, AgeCategoryEnum
+from decimal import Decimal
+
+# Initialize the tax calculation API
+api = TaxCalculationAPI()
+
+# Example: Software engineer with ₹15 lakhs gross salary
+result = api.calculate_tax_from_input(
+    assessment_year="2024-25",
+    gross_salary=Decimal("1500000"),          # ₹15 lakhs gross salary
+    basic_salary=Decimal("600000"),           # ₹6 lakhs basic salary
+    hra_received=Decimal("180000"),           # ₹1.8 lakhs HRA received
+    bank_interest=Decimal("45000"),           # ₹45,000 bank interest (triggers 80TTA)
+    other_income=Decimal("75000"),            # ₹75,000 freelance/other income
+    house_property_income=Decimal("120000"),  # ₹1.2 lakhs rental income
+    section_80c=Decimal("150000"),            # ₹1.5 lakhs in PPF/ELSS/LIC (max limit)
+    section_80ccd_1b=Decimal("50000"),        # ₹50,000 NPS contribution (additional)
+    tds_paid=Decimal("185000"),               # ₹1.85 lakhs TDS already deducted
+    city_type="metro",                        # Living in metro city (for HRA exemption)
+    regime=TaxRegime.BOTH,                    # Calculate both old and new regime
+    age_category=AgeCategoryEnum.BELOW_60,    # Below 60 years
+    verbose=True
+)
+
+# Display results
+if result['status'] == 'success':
+    print(f"Assessment Year: {result['assessment_year']}")
+    print(f"Regimes calculated: {', '.join(result['regimes_calculated'])}")
+    print(f"\nRecommendation: {result['recommendation']}")
+    
+    # Show detailed breakdown for both regimes
+    for regime_name, regime_data in result['results'].items():
+        print(f"\n{'='*50}")
+        print(f"{regime_name.upper()} REGIME CALCULATION")
+        print(f"{'='*50}")
+        print(f"Taxable Income: ₹{regime_data['taxable_income']:,.0f}")
+        print(f"Tax Liability: ₹{regime_data['tax_liability']:,.0f}")
+        print(f"TDS Paid: ₹{regime_data['tds_paid']:,.0f}")
+        print(f"Balance: ₹{abs(regime_data['balance']):,.0f} ({'REFUND' if regime_data['balance'] > 0 else 'ADDITIONAL PAYABLE'})")
+        print(f"Effective Tax Rate: {regime_data['effective_tax_rate']:.2f}%")
+        
+        # Show detailed tax calculation breakdown
+        detailed = regime_data['detailed_calculation']
+        print(f"\nTax Calculation Details:")
+        print(f"  Tax Before Rebate: ₹{detailed['tax_before_rebate']:,.0f}")
+        print(f"  Surcharge: ₹{detailed['surcharge']:,.0f}")
+        print(f"  Health & Education Cess: ₹{detailed['cess']:,.0f}")
+        print(f"  Rebate u/s 87A: ₹{detailed['rebate_87a']:,.0f}")
+        
+        # Show deductions breakdown for old regime
+        if regime_name == 'old':
+            deductions = detailed['deductions_used']
+            print(f"\nDeductions Used:")
+            print(f"  Section 80C: ₹{deductions['section_80c']:,.0f}")
+            print(f"  Section 80CCD(1B): ₹{deductions['section_80ccd_1b']:,.0f}")
+            print(f"  Total Deductions: ₹{deductions['total_deductions']:,.0f}")
+    
+    print(f"\n{'='*70}")
+    print("INPUT SUMMARY")
+    print(f"{'='*70}")
+    input_data = result['input_data']
+    print(f"Gross Salary: ₹{input_data['gross_salary']:,.0f}")
+    print(f"Bank Interest: ₹{input_data['bank_interest']:,.0f}")
+    print(f"Other Income: ₹{input_data['other_income']:,.0f}")
+    print(f"House Property: ₹{input_data['house_property']:,.0f}")
+    print(f"Section 80C: ₹{input_data['section_80c']:,.0f}")
+    print(f"Section 80CCD(1B): ₹{input_data['section_80ccd_1b']:,.0f}")
+    print(f"TDS Paid: ₹{input_data['tds_paid']:,.0f}")
+    
+else:
+    print(f"Error: {result['error_message']}")
+
+# Example output:
+"""
+Assessment Year: 2024-25
+Regimes calculated: old, new
+
+Recommendation: OLD regime recommended - saves ₹28,500 annually
+
+==================================================
+OLD REGIME CALCULATION
+==================================================
+Taxable Income: ₹1,540,000
+Tax Liability: ₹156,000
+TDS Paid: ₹185,000
+Balance: ₹29,000 (REFUND)
+Effective Tax Rate: 10.40%
+
+Tax Calculation Details:
+  Tax Before Rebate: ₹148,000
+  Surcharge: ₹0
+  Health & Education Cess: ₹5,920
+  Rebate u/s 87A: ₹0
+
+Deductions Used:
+  Section 80C: ₹150,000
+  Section 80CCD(1B): ₹50,000
+  Total Deductions: ₹200,000
+
+==================================================
+NEW REGIME CALCULATION
+==================================================
+Taxable Income: ₹1,690,000
+Tax Liability: ₹184,500
+TDS Paid: ₹185,000
+Balance: ₹500 (REFUND)  
+Effective Tax Rate: 12.30%
+
+Tax Calculation Details:
+  Tax Before Rebate: ₹175,000
+  Surcharge: ₹0
+  Health & Education Cess: ₹7,000
+  Rebate u/s 87A: ₹0
+
+======================================================================
+INPUT SUMMARY
+======================================================================
+Gross Salary: ₹1,500,000
+Bank Interest: ₹45,000
+Other Income: ₹75,000
+House Property: ₹120,000
+Section 80C: ₹150,000
+Section 80CCD(1B): ₹50,000
+TDS Paid: ₹185,000
+"""
+```
+
+This example demonstrates:
+- **Complete income calculation** with salary, bank interest, other income, and house property
+- **All major deductions** including 80C and 80CCD(1B)
+- **Both tax regimes** comparison for 2024-25
+- **Detailed breakdown** with effective tax rates and recommendations
+- **Real-world scenario** for a software engineer with diversified income sources
 
 ---
 

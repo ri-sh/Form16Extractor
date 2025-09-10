@@ -198,36 +198,73 @@ class DummyDataGenerator:
             "regimes_calculated": ["old", "new"],
             "recommendation": "OLD regime saves Rs 79,560 annually",
             "demo_mode": True,
-            "results": {
-                "old": {
-                    "gross_income": 2500000.0,
+            # Employee info for display
+            "employee_info": {
+                "name": self.employee.name,
+                "pan": self.employee.pan,
+                "employer": self.employer.name,
+                "assessment_year": "2024-25"
+            },
+            # Financial data for calculations
+            "financial_data": {
+                "section_17_1_salary": 2000000.0,  # 20 LPA basic salary
+                "section_17_2_perquisites": 500000.0,  # 5 LPA perquisites  
+                "gross_salary": 2500000.0,         # 25 LPA total
+                "section_80c": 150000.0,           # Max 80C deduction
+                "section_80ccd_1b": 50000.0,       # NPS additional deduction
+                "section_80d": 25000.0,            # Health insurance
+                "total_tds": 400000.0               # TDS deducted
+            },
+            # Regime comparison in expected format
+            "regime_comparison": {
+                "old_regime": {
                     "taxable_income": 1795000.0,  # After all deductions (₹6.55L total deductions)
                     "tax_liability": 365040.0,    # Realistic tax: ₹3,51,000 + 4% cess
                     "tds_paid": 400000.0,         # 16% TDS deduction
-                    "balance": 34960.0,           # Small refund
-                    "status": "refund_due",
-                    "effective_tax_rate": 14.60,
-                    "breakdown": {
-                        "standard_deduction": 50000.0,
-                        "section_80c": 150000.0,
-                        "section_80ccd_1b": 50000.0,
-                        "section_80d": 25000.0,
-                        "hra_exemption": 380000.0,  # 50% of HRA for metro city
-                        "total_deductions": 655000.0
+                    "refund_due": 34960.0,        # Small refund
+                    "tax_due": 0.0,
+                    "effective_rate": 14.60,
+                    "deductions_used": {
+                        "80C": 150000.0,
+                        "80CCD(1B)": 50000.0,
+                        "80D": 25000.0
                     }
                 },
-                "new": {
-                    "gross_income": 2500000.0,
+                "new_regime": {
                     "taxable_income": 2425000.0,  # Only ₹75k standard deduction
                     "tax_liability": 444600.0,    # Realistic tax: ₹4,27,500 + 4% cess  
                     "tds_paid": 400000.0,
-                    "balance": -44600.0,          # Additional tax due
-                    "status": "additional_tax_due",
-                    "effective_tax_rate": 17.78,
-                    "breakdown": {
-                        "standard_deduction": 75000.0,  # Higher standard deduction in new regime
-                        "total_deductions": 75000.0
+                    "refund_due": 0.0,
+                    "tax_due": 44600.0,           # Additional tax due
+                    "effective_rate": 17.78,
+                    "deductions_used": {
+                        "80C": 0.0,
+                        "80CCD(1B)": 50000.0,  # Still allowed in new regime
+                        "80D": 0.0
                     }
+                }
+            },
+            "recommended_regime": "old",
+            "tax_savings": 79560.0,
+            # Legacy format for backward compatibility
+            "results": {
+                "old": {
+                    "gross_income": 2500000.0,
+                    "taxable_income": 1795000.0,
+                    "tax_liability": 365040.0,
+                    "tds_paid": 400000.0,
+                    "balance": 34960.0,
+                    "status": "refund_due",
+                    "effective_tax_rate": 14.60
+                },
+                "new": {
+                    "gross_income": 2500000.0,
+                    "taxable_income": 2425000.0,
+                    "tax_liability": 444600.0,
+                    "tds_paid": 400000.0,
+                    "balance": -44600.0,
+                    "status": "additional_tax_due",
+                    "effective_tax_rate": 17.78
                 }
             },
             "comparison": {

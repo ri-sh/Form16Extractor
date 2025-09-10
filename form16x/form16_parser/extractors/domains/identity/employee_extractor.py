@@ -97,6 +97,8 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         # First, populate from text extraction data if available (higher priority)
         if text_data:
             self._populate_from_text_data(employee_info, text_data)
+        else:
+            self.logger.debug("No text extraction data available for employee extraction")
         
         # Then extract from tables (will not overwrite existing values from text)
         for i, table in enumerate(tables):
@@ -772,4 +774,8 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
                         setattr(employee_info, confidence_attr, 0.9)
                     
                     self.logger.debug(f"Set {model_field} from text data: {value}")
+                else:
+                    self.logger.debug(f"Empty value for {text_field}: {repr(text_data[text_field])}")
+            else:
+                self.logger.debug(f"{text_field} not found in text_data or empty")
     
