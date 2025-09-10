@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Rishabh Roy", email = "your.email@example.com"},
+    {name = "Author Name", email = "your.email@example.com"},
 ]
 maintainers = [
-    {name = "Rishabh Roy", email = "your.email@example.com"},
+    {name = "Author Name", email = "your.email@example.com"},
 ]
 keywords = [
     "form16", 
@@ -79,12 +79,12 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/form16-extractor"
+Homepage = "https://github.com/ri-sh/Form16Extractor"
 Documentation = "https://form16-extractor.readthedocs.io/"
-Repository = "https://github.com/yourusername/form16-extractor.git"
-"Bug Reports" = "https://github.com/yourusername/form16-extractor/issues"
-Changelog = "https://github.com/yourusername/form16-extractor/blob/main/CHANGELOG.md"
-"Say Thanks!" = "https://github.com/yourusername/form16-extractor/stargazers"
+Repository = "https://github.com/ri-sh/Form16Extractor.git"
+"Bug Reports" = "https://github.com/ri-sh/Form16Extractor/issues"
+Changelog = "https://github.com/ri-sh/Form16Extractor/blob/main/CHANGELOG.md"
+"Say Thanks!" = "https://github.com/ri-sh/Form16Extractor/stargazers"
 
 [project.scripts]
 form16-extract = "form16_extractor.cli:main"

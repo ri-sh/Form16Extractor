@@ -69,8 +69,8 @@ ln -s "$(brew --prefix gs)/lib/libgs.dylib" ~/lib
 ### Install Form16 Extractor
 
 ```bash
-git clone https://github.com/username/form16_extractor.git
-cd form16_extractor
+git clone https://github.com/ri-sh/Form16Extractor.git
+cd Form16Extractor
 pip install -r requirements.txt
 
 # Extract a Form16 

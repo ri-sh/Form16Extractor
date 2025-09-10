@@ -314,4 +314,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Support
 
-For questions, bug reports, or feature requests, please visit our [GitHub Issues](https://github.com/username/form16-extractor/issues) page.
+For questions, bug reports, or feature requests, please visit our [GitHub Issues](https://github.com/ri-sh/Form16Extractor/issues) page.

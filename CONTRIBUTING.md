@@ -18,8 +18,8 @@ The Form16 Extractor project aims to make working with Indian tax documents easi
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/yourusername/form16-extractor.git
-   cd form16-extractor
+   git clone https://github.com/ri-sh/Form16Extractor.git
+   cd Form16Extractor
    ```
 
 2. **Set up Development Environment**
