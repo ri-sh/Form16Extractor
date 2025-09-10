@@ -10,7 +10,7 @@ import unittest
 import os
 from pathlib import Path
 
-from form16_extractor.config.settings import (
+from form16x.form16_parser.config.settings import (
     Environment,
     ExtractionSettings,
     Settings,

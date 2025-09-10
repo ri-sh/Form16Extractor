@@ -16,14 +16,14 @@ with open(requirements_path, encoding="utf-8") as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
-    name="taxedo",
+    name="form16-parser",
     version="2.1.0",
-    description="Comprehensive Form16 extraction and tax calculation tool for Indian tax returns",
+    description="A robust Python library for extracting structured data from Indian Form16 tax documents",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Rishabh Roy",
-    author_email="your-email@example.com",  # Update with actual email
-    url="https://github.com/ri-sh/Form16Extractor",
+    author_email="dev@example.com",
+    url="https://github.com/ri-sh/form16x",
     license="MIT",
     
     # Package information
@@ -35,7 +35,7 @@ setup(
     # Console script entry point
     entry_points={
         "console_scripts": [
-            "taxedo=cli:main",
+            "form16x=form16x.form16_parser.cli:main",
         ],
     },
     
@@ -64,7 +64,7 @@ setup(
     
     # Package data
     package_data={
-        "form16_extractor": [
+        "form16x": [
             "*.md",
             "*.txt", 
             "*.json",
@@ -74,8 +74,8 @@ setup(
     
     # Project URLs
     project_urls={
-        "Bug Reports": "https://github.com/ri-sh/Form16Extractor/issues",
-        "Source": "https://github.com/ri-sh/Form16Extractor",
-        "Documentation": "https://github.com/ri-sh/Form16Extractor/blob/master/README.md",
+        "Bug Reports": "https://github.com/ri-sh/form16x/issues",
+        "Source": "https://github.com/ri-sh/form16x",
+        "Documentation": "https://github.com/ri-sh/form16x/blob/master/README.md",
     },
 )

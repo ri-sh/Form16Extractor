@@ -6,11 +6,11 @@ import pytest
 from decimal import Decimal
 from unittest.mock import Mock
 
-from form16_extractor.consolidators.multi_company_consolidator import (
+from form16x.form16_parser.consolidators.multi_company_consolidator import (
     MultiCompanyForm16Consolidator, ConsolidationStatus, ConsolidatedSalaryData,
     ConsolidatedTDSData, ConsolidatedDeductionsData
 )
-from form16_extractor.utils.validation import ValidationError
+from form16x.form16_parser.utils.validation import ValidationError
 
 
 class TestMultiCompanyForm16Consolidator:

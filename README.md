@@ -1,4 +1,4 @@
-# Form16Extractor
+# Form16x - Form16 Parser
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -14,7 +14,7 @@
 
 ## TL;DR
 
-Form16Extractor extracts Part A & Part B from Form 16 PDFs and outputs structured JSON with employee/employer details, salary components, deductions (80C/80D/etc.), TDS breakdown, and computed tax for old/new regimes.
+Form16x extracts Part A & Part B from Form 16 PDFs and outputs structured JSON with employee/employer details, salary components, deductions (80C/80D/etc.), TDS breakdown, and computed tax for old/new regimes.
 
 * Runs fully **offline** (no uploads).
 * Works with common layout variants and imperfect PDFs.
@@ -69,18 +69,18 @@ ln -s "$(brew --prefix gs)/lib/libgs.dylib" ~/lib
 ### Install Form16 Extractor
 
 ```bash
-git clone https://github.com/ri-sh/Form16Extractor.git
-cd Form16Extractor
+git clone https://github.com/ri-sh/form16x.git
+cd form16x
 pip install -r requirements.txt
 
 # Option 1: Install as package for taxedo command (RECOMMENDED)
 pip install -e .
 
-# Now use the user-friendly taxedo command
-taxedo extract json path/to/Form16.pdf --calculate-tax
+# Now use the form16x command
+form16x extract json path/to/Form16.pdf --calculate-tax
 
 # Option 2: Use directly with Python (legacy)
-python cli.py extract --file path/to/Form16.pdf --output result.json
+form16x extract --file path/to/Form16.pdf --output result.json
 ```
 
 **Note:** If you encounter issues with camelot installation, see the [official camelot-py installation guide](https://camelot-py.readthedocs.io/en/master/user/install-deps.html).
@@ -91,57 +91,42 @@ python cli.py extract --file path/to/Form16.pdf --output result.json
 
 ```bash
 # Extract to JSON
-python cli.py extract --file form16_sample.pdf --output result.json
+form16x extract json form16_sample.pdf --output result.json
 
 # Consolidate multiple Form16s from different employers
-python cli.py consolidate --files company1.pdf company2.pdf --calculate-tax 
+form16x consolidate --files company1.pdf company2.pdf --calculate-tax 
 
 # Extract with tax calculation
-python cli.py extract --file form16_sample.pdf --calculate-tax
+form16x extract json form16_sample.pdf --calculate-tax
 
 # Get detailed tax breakdown with regime comparison
-python cli.py extract --file form16_sample.pdf --calculate-tax --summary 
+form16x extract json form16_sample.pdf --calculate-tax --summary 
 
 # Calculate for specific regime only
-python cli.py extract --file form16_sample.pdf --calculate-tax --tax-regime new
+form16x extract json form16_sample.pdf --calculate-tax --tax-regime new
 
 # Visual colored display with regime comparison (best for analysis)
-python cli.py extract --file form16_sample.pdf --calculate-tax --display-mode colored
+form16x extract json form16_sample.pdf --calculate-tax --display-mode colored
 
 # Plain table display for simple text output
-python cli.py extract --file form16_sample.pdf --calculate-tax --display-mode table
+form16x extract json form16_sample.pdf --calculate-tax --display-mode table
 
 # Add bank interest income for accurate 80TTA/80TTB calculations
-python cli.py extract --file form16_sample.pdf --calculate-tax --bank-interest 25000
+form16x extract json form16_sample.pdf --calculate-tax --bank-interest 25000
 
 # Include other income sources (rental, freelance, etc.)
-python cli.py extract --file form16_sample.pdf --calculate-tax --other-income 50000
+form16x extract json form16_sample.pdf --calculate-tax --other-income 50000
 
 # Tax calculation for senior citizens (60-80 years)
-python cli.py extract --file form16_sample.pdf --calculate-tax --age-category senior_60_to_80
+form16x extract json form16_sample.pdf --calculate-tax --age-category senior_60_to_80
 
-# NEW: User-friendly taxedo command (after pip install -e .)
-# Simple extraction to JSON
-taxedo extract json form16_sample.pdf
-
-# Extract with beautiful colored tax regime comparison
-taxedo extract json form16_sample.pdf --calculate-tax --display-mode colored
-
-# Extract with clean table display (good for reports)
-taxedo extract json form16_sample.pdf --calculate-tax --display-mode table
-
+# Additional examples with form16x command
 # Extract to CSV format
-taxedo extract csv form16_sample.pdf --output data.csv
-
-# Consolidate multiple employers with tax calculation
-taxedo consolidate --files company1.pdf company2.pdf --calculate-tax
-
-# Extract with bank interest for 80TTA/80TTB deductions
-taxedo extract json form16_sample.pdf --calculate-tax --bank-interest 25000
+form16x extract csv form16_sample.pdf --output data.csv
 
 # Get help and supported assessment years
-taxedo --help
-taxedo info
+form16x --help
+form16x info
 
 
 ```
@@ -150,9 +135,30 @@ taxedo info
 
 ## Python usage example
 
+### Quick Start - Direct imports from form16x
+
 ```python
-from form16_extractor.extractors.enhanced_form16_extractor import EnhancedForm16Extractor
-from form16_extractor.pdf.reader import RobustPDFProcessor
+from form16x import TaxCalculationAPI, TaxRegime, EnhancedForm16Extractor
+from decimal import Decimal
+
+# Initialize API for tax calculations
+api = TaxCalculationAPI()
+
+# Calculate tax from Form16 PDF
+result = api.calculate_tax_from_form16(
+    form16_file="form16_sample.pdf",
+    regime=TaxRegime.BOTH,
+    bank_interest=Decimal("25000")
+)
+
+print(result['recommendation'])  # e.g., "NEW regime saves ₹25,000 annually"
+```
+
+### Detailed extraction example
+
+```python
+from form16x.form16_parser.extractors.enhanced_form16_extractor import EnhancedForm16Extractor
+from form16x.form16_parser.pdf.reader import RobustPDFProcessor
 
 # Initialize extractor and PDF processor
 extractor = EnhancedForm16Extractor()
@@ -174,7 +180,7 @@ print(form16_result.employer.name)
 ### Tax Calculation API
 
 ```python
-from form16_extractor.api import TaxCalculationAPI, TaxRegime
+from form16x.form16_parser.api import TaxCalculationAPI, TaxRegime
 from decimal import Decimal
 
 # Initialize API
@@ -348,9 +354,8 @@ print(result['recommendation'])  # e.g., "NEW regime saves ₹25,000 annually"
    - **Deductions Extractor:** Chapter VI-A deductions (80C, 80D, 80CCD, etc.)
    - **Tax Computation Extractor:** Tax calculations, TDS summary, refund/payable amounts
 4. **Enhanced Routing:** High-scoring tables are processed by multiple extractors to maximize field coverage
-5. **Zero Value Handling:** Recognizes and preserves explicit zero values vs missing data
-6. **Confidence Scoring:** Each extracted field includes confidence metrics for quality assessment
-7. **Structured Output:** Generates comprehensive JSON following official Form 16 Part A/Part B structure
+5. **Confidence Scoring:** Each extracted field includes confidence metrics for quality assessment
+6. **Structured Output:** Generates comprehensive JSON following official Form 16 Part A/Part B structure
 
 ---
 

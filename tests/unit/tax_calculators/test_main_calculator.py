@@ -6,11 +6,11 @@ import pytest
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
-from form16_extractor.tax_calculators.main_calculator import MultiYearTaxCalculator
-from form16_extractor.tax_calculators.interfaces.calculator_interface import (
+from form16x.form16_parser.tax_calculators.main_calculator import MultiYearTaxCalculator
+from form16x.form16_parser.tax_calculators.interfaces.calculator_interface import (
     TaxCalculationInput, TaxRegimeType, AgeCategory
 )
-from form16_extractor.utils.validation import ValidationError
+from form16x.form16_parser.utils.validation import ValidationError
 
 
 class TestMultiYearTaxCalculator:

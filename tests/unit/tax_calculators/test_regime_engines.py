@@ -6,9 +6,9 @@ import pytest
 from decimal import Decimal
 from unittest.mock import Mock
 
-from form16_extractor.tax_calculators.engines.old_regime import OldTaxRegime
-from form16_extractor.tax_calculators.engines.new_regime import NewTaxRegime
-from form16_extractor.tax_calculators.interfaces.calculator_interface import AgeCategory
+from form16x.form16_parser.tax_calculators.engines.old_regime import OldTaxRegime
+from form16x.form16_parser.tax_calculators.engines.new_regime import NewTaxRegime
+from form16x.form16_parser.tax_calculators.interfaces.calculator_interface import AgeCategory
 
 
 class TestOldTaxRegime:

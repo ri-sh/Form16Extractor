@@ -54,7 +54,7 @@ We use pytest for testing:
 python -m pytest
 
 # Run with coverage
-python -m pytest --cov=form16_extractor
+python -m pytest --cov=form16_parser
 
 # Run specific test categories
 python -m pytest tests/unit/models/          # Model tests
@@ -81,7 +81,7 @@ These run automatically via pre-commit hooks, but you can run them manually:
 black .
 isort .
 flake8 .
-mypy form16_extractor/
+mypy form16_parser/
 ```
 
 ## Reporting Bugs
@@ -154,7 +154,7 @@ We love new ideas! When suggesting features:
 3. **Test thoroughly**:
    ```bash
    python -m pytest
-   python -m pytest --cov=form16_extractor --cov-report=html
+   python -m pytest --cov=form16_parser --cov-report=html
    ```
 
 4. **Update documentation**:
@@ -201,7 +201,7 @@ Brief description of changes.
 ### Code Organization
 
 ```
-form16_extractor/
+form16_parser/
 ├── extractors/           # Core extraction logic
 │   ├── domains/         # Domain-specific extractors
 │   │   ├── identity/    # Employee/employer extraction

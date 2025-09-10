@@ -10,7 +10,7 @@ import unittest
 import pandas as pd
 from decimal import Decimal
 
-from form16_extractor.extractors.mixins.amount_parsing_mixin import AmountParsingMixin
+from form16x.form16_parser.extractors.mixins.amount_parsing_mixin import AmountParsingMixin
 
 
 class TestAmountParsingMixin(unittest.TestCase):

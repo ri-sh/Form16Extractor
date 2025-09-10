@@ -9,7 +9,7 @@ Test coverage for validation utility functions.
 import unittest
 from decimal import Decimal
 
-from form16_extractor.utils.validation import ValidationError
+from form16x.form16_parser.utils.validation import ValidationError
 
 
 class TestValidationError(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestValidationUtilities(unittest.TestCase):
     
     def test_validation_module_imports(self):
         """Test that validation module imports correctly."""
-        from form16_extractor.utils import validation
+        from form16x.form16_parser.utils import validation
         self.assertTrue(hasattr(validation, 'ValidationError'))
     
     def test_validation_error_usage_pattern(self):

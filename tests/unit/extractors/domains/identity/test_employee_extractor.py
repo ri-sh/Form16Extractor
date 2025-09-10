@@ -7,8 +7,8 @@ Tests for employee field extraction from Form16 tables.
 
 import pytest
 import pandas as pd
-from form16_extractor.extractors.domains.identity.employee_extractor import EmployeeExtractor
-from form16_extractor.models.form16_models import EmployeeInfo
+from form16x.form16_parser.extractors.domains.identity.employee_extractor import EmployeeExtractor
+from form16x.form16_parser.models.form16_models import EmployeeInfo
 
 
 class TestEmployeeExtractor:

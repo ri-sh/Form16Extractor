@@ -11,7 +11,7 @@ import time
 from unittest.mock import patch, MagicMock, Mock
 from io import StringIO
 
-from form16_extractor.progress.progress_tracker import (
+from form16x.form16_parser.progress.progress_tracker import (
     Form16ProgressTracker,
     Form16ProcessingStages,
     ProgressContext,

@@ -10,7 +10,7 @@ import unittest
 import pandas as pd
 from unittest.mock import Mock, patch
 
-from form16_extractor.utils.table_utils import (
+from form16x.form16_parser.utils.table_utils import (
     TablePreprocessor,
     TableAnalyzer,
     preprocess_tables

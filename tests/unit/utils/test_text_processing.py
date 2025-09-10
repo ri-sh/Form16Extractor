@@ -9,7 +9,7 @@ Test coverage for text processing and normalization functions.
 import unittest
 from decimal import Decimal
 
-from form16_extractor.utils.text_processing import (
+from form16x.form16_parser.utils.text_processing import (
     TextCleaner,
     AmountExtractor,
     PatternMatcher

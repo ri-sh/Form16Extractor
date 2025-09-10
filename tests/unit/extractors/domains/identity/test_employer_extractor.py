@@ -7,8 +7,8 @@ Tests for employer name, TAN, and address extraction from Form16 documents.
 
 import pytest
 import pandas as pd
-from form16_extractor.extractors.domains.identity.employer_extractor import EmployerExtractor
-from form16_extractor.models.form16_models import EmployerInfo
+from form16x.form16_parser.extractors.domains.identity.employer_extractor import EmployerExtractor
+from form16x.form16_parser.models.form16_models import EmployerInfo
 
 
 class TestEmployerExtractor:

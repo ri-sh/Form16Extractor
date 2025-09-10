@@ -182,3 +182,6 @@ test_correct_computation.py
 fin_real_*.py
 comprehensive*.md
 fix_*.py
+
+# API example files - don't commit
+api_example*.py

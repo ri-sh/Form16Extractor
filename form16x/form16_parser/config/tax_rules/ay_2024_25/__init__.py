@@ -1,0 +1,1 @@
+"""Tax rules for assessment year 2024-25."""

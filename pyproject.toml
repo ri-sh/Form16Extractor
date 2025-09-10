@@ -3,17 +3,17 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "form16-extractor"
+name = "form16-parser"
 version = "1.0.0"
 description = "A robust Python library for extracting structured data from Indian Form16 tax documents"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Author Name", email = "your.email@example.com"},
+    {name = "Test User", email = "dev@example.com"},
 ]
 maintainers = [
-    {name = "Author Name", email = "your.email@example.com"},
+    {name = "Test User", email = "dev@example.com"},
 ]
 keywords = [
     "form16", 
@@ -87,17 +87,17 @@ Changelog = "https://github.com/ri-sh/Form16Extractor/blob/main/CHANGELOG.md"
 "Say Thanks!" = "https://github.com/ri-sh/Form16Extractor/stargazers"
 
 [project.scripts]
-form16-extract = "form16_extractor.cli:main"
+form16x = "form16x.form16_parser.cli:main"
 
 [tool.setuptools]
 zip-safe = false
 
 [tool.setuptools.packages.find]
-include = ["form16_extractor*"]
+include = ["form16x*"]
 exclude = ["tests*", "docs*"]
 
 [tool.setuptools.package-data]
-form16_extractor = ["*.json", "*.yaml", "*.yml"]
+form16x = ["*.json", "*.yaml", "*.yml"]
 
 # Black configuration
 [tool.black]
@@ -135,7 +135,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=form16_extractor",
+    "--cov=form16x",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
@@ -154,7 +154,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["form16_extractor"]
+source = ["form16x"]
 omit = [
     "*/tests/*",
     "*/test_*",

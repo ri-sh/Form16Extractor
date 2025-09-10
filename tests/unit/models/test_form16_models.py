@@ -9,7 +9,7 @@ import pytest
 from decimal import Decimal
 from datetime import date
 from pydantic import ValidationError
-from form16_extractor.models.form16_models import (
+from form16x.form16_parser.models.form16_models import (
     PAN, TAN, Amount, EmployeeInfo, EmployerInfo, SalaryBreakdown,
     TaxDeductionQuarterly, ChapterVIADeductions, Section16Deductions,
     TaxComputation, Form16Metadata, Form16Document, ExtractionResult

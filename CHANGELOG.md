@@ -79,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Implementation
 
 #### Architecture Enhancements
-- **API Package Structure**: New `form16_extractor.api` package with clean public interface
+- **API Package Structure**: New `form16_parser.api` package with clean public interface
 - **Enhanced Data Mappers**: Improved `Form16ToTaxMapper` with comprehensive Form16 to tax input conversion
 - **Robust PDF Processing**: Enhanced PDF extraction pipeline with better error handling and performance
 - **Configuration Management**: Flexible configuration system for different calculation scenarios
@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Migration Guide
 - **Backward Compatibility**: All existing CLI commands remain fully compatible
-- **New API Usage**: Simple import and usage pattern: `from form16_extractor.api import TaxCalculationAPI`
+- **New API Usage**: Simple import and usage pattern: `from form16x.form16_parser.api import TaxCalculationAPI`
 - **Enhanced Capabilities**: Existing users can now access programmatic API for custom integrations
 - **Gradual Migration**: Can adopt new API features incrementally without breaking existing workflows
 
@@ -115,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Implementation
 - **Rich Library Integration**: Added Rich 14.1.0 dependency for advanced terminal output capabilities
-- **Modular Progress Architecture**: Created dedicated `form16_extractor.progress` package with reusable components
+- **Modular Progress Architecture**: Created dedicated `form16_parser.progress` package with reusable components
 - **Context Manager Pattern**: Progress tracking uses context managers for clean resource management
 - **Fallback Support**: Automatic detection of Rich availability with graceful degradation to simple progress indicators
 - **CLI Integration**: Seamless integration into existing CLI commands without breaking changes
