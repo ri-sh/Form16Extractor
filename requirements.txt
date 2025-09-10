@@ -7,7 +7,7 @@ pytest-cov>=4.0.0         # Test coverage
 pytest-asyncio>=0.21.0    # Async testing support
 
 # PDF processing and text extraction
-PyPDF2>=3.0.0             # PDF text extraction fallback
+PyPDF2==2.12.1            # PDF text extraction fallback (compatible with camelot)
 tabula-py>=2.7.0          # Alternative table extraction
 pdfplumber>=0.9.0         # Text-based PDF analysis
 

@@ -3,7 +3,7 @@
 Enhanced Form16 Extractor
 ========================
 
-Staff Software Engineer approach to prevent regression issues:
+Engineering approach to prevent regression issues:
 - Progressive enhancement (add features level by level)
 - Adapter pattern for interface consistency
 - Test at each level to ensure no regression
@@ -11,7 +11,7 @@ Staff Software Engineer approach to prevent regression issues:
 
 Processing Levels:
 0. BASIC - Traditional approach (40.2% baseline)
-1. SCORED - + Multi-category classification + routing (target: 65-70% - addresses ₹10.82M under-extraction)
+1. SCORED - + Multi-category classification + routing (target: 65-70% - addresses significant under-extraction)
 2. ENHANCED - + Zero value recognition (target: 75-80%)
 3. VALIDATED - + Cross validation (target: 85-90%)
 """
@@ -82,15 +82,15 @@ class EnhancedForm16Extractor:
 # Fusion engine removed - using coordinator-based extraction
         
         if processing_level >= ProcessingLevel.SCORED:
-            # CRITICAL: Use multi-category classification instead of basic table scoring
+            # Use multi-category classification instead of basic table scoring
             self.multi_classifier = MultiCategoryClassifier()
             self.extraction_orchestrator = ExtractionOrchestrator()
             self.routing_coordinator = RoutingCoordinator()
-            self.logger.info("Enabled: Multi-Category Classification + Routing (coordinator-based extraction)")
+            self.logger.info("Multi-Category Classification and Routing enabled")
             
         if processing_level >= ProcessingLevel.ENHANCED:
             self.zero_handler = ZeroValueHandler()
-            self.logger.info("Enabled: Zero Value Recognition")
+            self.logger.info("Zero Value Recognition enabled")
         
         # Initialize extractors directly (no adapters needed)
         self._initialize_extractors()
@@ -113,13 +113,15 @@ class EnhancedForm16Extractor:
         self.tds_extractor = QuarterlyTdsExtractorComponent()
     
     def extract_all(self, tables: List[pd.DataFrame], 
-                   page_numbers: Optional[List[int]] = None) -> Form16Document:
+                   page_numbers: Optional[List[int]] = None,
+                   text_data: Optional[Dict[str, Any]] = None) -> Form16Document:
         """
         Extract Form16 data using progressive processing levels
         
         Args:
             tables: List of DataFrames containing table data
             page_numbers: Page numbers for context (optional)
+            text_data: Optional dictionary with text-extracted identity data
             
         Returns:
             Form16Document with extraction results
@@ -130,34 +132,34 @@ class EnhancedForm16Extractor:
         
         try:
             if self.processing_level == ProcessingLevel.BASIC:
-                return self._extract_basic(tables, page_numbers)
+                return self._extract_basic(tables, page_numbers, text_data)
             elif self.processing_level == ProcessingLevel.SCORED:
-                return self._extract_with_scoring(tables, page_numbers)
+                return self._extract_with_scoring(tables, page_numbers, text_data)
             elif self.processing_level == ProcessingLevel.ENHANCED:
                 return self._extract_with_zero_handling(tables, page_numbers)
             elif self.processing_level == ProcessingLevel.VALIDATED:
                 return self._extract_with_validation(tables, page_numbers)
             else:
                 self.logger.warning(f"Unknown processing level: {self.processing_level}, falling back to basic")
-                return self._extract_basic(tables, page_numbers)
+                return self._extract_basic(tables, page_numbers, text_data)
                 
         except Exception as e:
             self.logger.error(f"Enhanced extraction failed: {e}, falling back to basic")
-            return self.basic_extractor.extract_all(tables, page_numbers)
+            return self.basic_extractor.extract_all(tables, page_numbers, text_data=text_data)
     
-    def _extract_basic(self, tables: List[pd.DataFrame], page_numbers: Optional[List[int]] = None) -> Form16Document:
+    def _extract_basic(self, tables: List[pd.DataFrame], page_numbers: Optional[List[int]] = None, text_data: Optional[Dict[str, Any]] = None) -> Form16Document:
         """Level 0: Basic extraction (matches ModularSimpleForm16Extractor exactly)"""
         
         # Use basic extractor exactly as is
-        return self.basic_extractor.extract_all(tables, page_numbers)
+        return self.basic_extractor.extract_all(tables, page_numbers, text_data=text_data)
     
-    def _extract_with_scoring(self, tables: List[pd.DataFrame], page_numbers: Optional[List[int]] = None) -> Form16Document:
-        """Level 1: Basic + MULTI-CATEGORY CLASSIFICATION + ROUTING (CRITICAL - fixes ₹10.82M under-extraction)"""
+    def _extract_with_scoring(self, tables: List[pd.DataFrame], page_numbers: Optional[List[int]] = None, text_data: Optional[Dict[str, Any]] = None) -> Form16Document:
+        """Level 1: Basic + MULTI-CATEGORY CLASSIFICATION + ROUTING (addresses significant under-extraction)"""
         
         # Step 1: Classify tables with multi-category scoring
         classified_tables = self._classify_and_prepare_tables(tables, page_numbers)
         
-        # Step 2: CRITICAL - Apply multi-category classification and routing
+        # Step 2: Apply multi-category classification and routing
         if self.multi_classifier and self.routing_coordinator:
             return self._extract_with_multi_category_routing(classified_tables, tables)
         else:
@@ -204,7 +206,7 @@ class EnhancedForm16Extractor:
                 'classification': classification,
             }
             
-            # CRITICAL: Add multi-category scoring if available (Level 1+)
+            # Add multi-category scoring if available (Level 1+)
             if self.multi_classifier and self.processing_level >= ProcessingLevel.SCORED:
                 try:
                     domain_scores = self.multi_classifier.score_table(table)
@@ -306,8 +308,8 @@ class EnhancedForm16Extractor:
     
     def _extract_with_multi_category_routing(self, classified_tables: List[Dict], all_tables: List[pd.DataFrame]) -> Form16Document:
         """
-        CRITICAL METHOD: Extract using multi-category classification and routing.
-        This addresses the ₹10.82M under-extraction by processing mixed tables.
+        Extract using multi-category classification and routing.
+        This addresses under-extraction by processing mixed tables.
         """
         self.logger.info("Using multi-category classification and routing (Phase 1 implementation)")
         

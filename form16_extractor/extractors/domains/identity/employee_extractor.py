@@ -5,7 +5,7 @@ Employee Information Extractor
 Extracts employee information from Form16 tables using patterns
 identified from real Form16 documents.
 
-Based on analysis of actual Form16.pdf structure.
+Implements pattern-based extraction from Form16 PDF documents.
 """
 
 import re
@@ -57,13 +57,6 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
                 'Emp PAN',
                 'Designation',
             ],
-            'designation_section': [
-                'Employee Designation',
-                'Designation',
-                'Job Title',
-                'Position',
-                'Role',
-            ],
             # Additional patterns found in various Form16 formats
             'verification_section_patterns': [
                 'working in the capacity of',
@@ -80,25 +73,32 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             'context_match': 0.7
         }
     
-    def extract(self, tables: List[pd.DataFrame]) -> EmployeeInfo:
+    def extract(self, tables: List[pd.DataFrame], text_data: Optional[Dict[str, Any]] = None) -> EmployeeInfo:
         """Extract employee information from Form16 tables (IExtractor interface)"""
-        return self.extract_employee_info(tables)
+        return self.extract_employee_info(tables, text_data)
     
-    def extract_employee_info(self, tables: List[pd.DataFrame]) -> EmployeeInfo:
+    def extract_employee_info(self, tables: List[pd.DataFrame], text_data: Optional[Dict[str, Any]] = None) -> EmployeeInfo:
         """
-        Extract employee information from Form16 tables
+        Extract employee information from Form16 tables and text data
         
         Args:
             tables: List of DataFrame objects from Form16
+            text_data: Optional dictionary with text-extracted identity data
             
         Returns:
             EmployeeInfo object with extracted data
         """
         self.logger.info(f"Extracting employee info from {len(tables)} tables")
+        if text_data:
+            self.logger.info(f"Also using text extraction data with {len(text_data)} fields")
         
         employee_info = EmployeeInfo()
         
-        # Extract from each table
+        # First, populate from text extraction data if available (higher priority)
+        if text_data:
+            self._populate_from_text_data(employee_info, text_data)
+        
+        # Then extract from tables (will not overwrite existing values from text)
         for i, table in enumerate(tables):
             if table.empty:
                 continue
@@ -119,14 +119,14 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         
         return employee_info
     
-    def extract_with_confidence(self, tables: List[pd.DataFrame]) -> ExtractionResult[EmployeeInfo]:
+    def extract_with_confidence(self, tables: List[pd.DataFrame], text_data: Optional[Dict[str, Any]] = None) -> ExtractionResult[EmployeeInfo]:
         """
         Extract employee info with confidence scores (IExtractor interface)
         
         Returns:
             ExtractionResult with employee info and confidence scores
         """
-        employee_info = self.extract_employee_info(tables)
+        employee_info = self.extract_employee_info(tables, text_data)
         
         # Calculate confidence scores for each field
         confidence_scores = self._calculate_confidence_scores(tables, employee_info)
@@ -148,7 +148,7 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
     
     def get_supported_fields(self) -> List[str]:
         """Get list of fields this extractor supports (IExtractor interface)"""
-        return ["name", "pan", "address", "designation", "department", "employment_type", "employee_id"]
+        return ["name", "pan", "address", "department", "employment_type", "employee_id"]
     
     def extract_with_confidence_legacy(self, tables: List[pd.DataFrame]) -> Dict[str, Any]:
         """Legacy method for backward compatibility"""
@@ -178,9 +178,10 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         structured_results = self._extract_structured_table(table)
         results.update(structured_results)
         
-        # Strategy 4: Verification section extraction (for designation and other fields)
-        verification_results = self._extract_from_verification_section(table, table_text)
-        results.update(verification_results)
+        
+        # Strategy 5: Text-based extraction (moved to text extraction strategy)
+        # Note: Colon-split patterns like "Employee Name : [NAME]" are now handled 
+        # by the text extraction strategy in the PDF processor
         
         return results
     
@@ -243,8 +244,6 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             return 'pan'
         elif 'id' in header_lower:
             return 'employee_id'
-        elif 'designation' in header_lower:
-            return 'designation'
         return None
     
     def _is_valid_employee_data(self, header: str, value: str) -> bool:
@@ -269,9 +268,6 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             return not any(word in value_clean.lower() for word in 
                          ['limited', 'ltd', 'pvt', 'private', 'company', 'corp', 'inc', 'services'])
         
-        # Designation validation
-        elif 'designation' in header_lower:
-            return 2 <= len(value_clean) <= 100 and not value_clean.startswith(')')
         
         return True
     
@@ -475,7 +471,7 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         
         return results
     
-    def _extract_from_verification_section(self, table: pd.DataFrame, table_text: str) -> Dict[str, Any]:
+    def _extract_from_verification_section_DISABLED(self, table: pd.DataFrame, table_text: str) -> Dict[str, Any]:
         """Extract data from verification section (commonly contains designation info)"""
         
         results = {}
@@ -488,19 +484,58 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             
             # Look for "working in the capacity of" pattern for designation
             if 'working in the capacity of' in line_clean.lower():
+                # Check if this is in the signing officer section (should be rejected)
+                context_lines = lines[max(0, i-5):i+5]  # Get surrounding context
+                context_text = ' '.join(context_lines).lower()
+                
+                # Skip if this appears to be in a signing officer/verification section
+                signing_officer_indicators = [
+                    'do hereby certify',
+                    'hereby certify',
+                    'certify that',
+                    'verification',
+                    'person responsible',
+                    'signature of person responsible',
+                    'deduction of tax'
+                ]
+                
+                if any(indicator in context_text for indicator in signing_officer_indicators):
+                    self.logger.debug(f"Rejecting designation from signing officer section: {line_clean}")
+                    continue
+                
                 # Extract designation after this phrase
                 capacity_match = re.search(r'working in the capacity of\s+([^()]+)', line_clean, re.IGNORECASE)
                 if capacity_match:
                     designation = capacity_match.group(1).strip()
                     if designation and 'designation' not in designation.lower():
-                        results['designation'] = {
-                            'value': designation,
-                            'confidence': self.confidence_weights['exact_key_match'],
-                            'method': 'verification_section'
-                        }
+                        if self._is_valid_designation(designation):
+                            results['designation'] = {
+                                'value': designation,
+                                'confidence': self.confidence_weights['exact_key_match'],
+                                'method': 'verification_section'
+                            }
             
             # Look for "Designation:" patterns
             if 'designation:' in line_clean.lower():
+                # Check if this is in the signing officer section (should be rejected)
+                context_lines = lines[max(0, i-5):i+5]  # Get surrounding context
+                context_text = ' '.join(context_lines).lower()
+                
+                # Skip if this appears to be in a signing officer/verification section
+                signing_officer_indicators = [
+                    'do hereby certify',
+                    'hereby certify',
+                    'certify that',
+                    'verification',
+                    'person responsible',
+                    'signature of person responsible',
+                    'deduction of tax'
+                ]
+                
+                if any(indicator in context_text for indicator in signing_officer_indicators):
+                    self.logger.debug(f"Rejecting designation: pattern from signing officer section: {line_clean}")
+                    continue
+                
                 # Check if designation value is on same line
                 if '|' in line_clean:
                     parts = line_clean.split('|')
@@ -508,12 +543,13 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
                         if 'designation:' in part.lower():
                             continue
                         elif part.strip() and len(part.strip()) > 2:
-                            results['designation'] = {
-                                'value': part.strip(),
-                                'confidence': self.confidence_weights['exact_key_match'],
-                                'method': 'verification_section'
-                            }
-                            break
+                            if self._is_valid_designation(part.strip()):
+                                results['designation'] = {
+                                    'value': part.strip(),
+                                    'confidence': self.confidence_weights['exact_key_match'],
+                                    'method': 'verification_section'
+                                }
+                                break
                 
                 # Check next line for designation value
                 if i + 1 < len(lines) and 'designation' not in results:
@@ -522,8 +558,9 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
                         parts = next_line.split('|')
                         for part in parts:
                             if part.strip() and len(part.strip()) > 2:
-                                results['designation'] = {
-                                    'value': part.strip(),
+                                if self._is_valid_designation(part.strip()):
+                                    results['designation'] = {
+                                        'value': part.strip(),
                                     'confidence': self.confidence_weights['exact_key_match'],
                                     'method': 'verification_section'
                                 }
@@ -561,7 +598,7 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         
         return results
     
-    def _is_valid_designation(self, designation: str) -> bool:
+    def _is_valid_designation_DISABLED(self, designation: str) -> bool:
         """Check if text looks like a valid job designation"""
         if not designation or len(designation.strip()) < 2:
             return False
@@ -575,6 +612,11 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             'do hereby',
             'son / daughter',
             'working in',
+            'signature of person',
+            'person responsible',
+            'deduction of tax',
+            'full name:',
+            'verification',
         ]
         
         for pattern in invalid_patterns:
@@ -634,9 +676,6 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
             # Should be reasonable name length and not contain special chars
             return 2 <= len(value) <= 100 and not re.search(r'[0-9@#$%^&*]', value)
         
-        elif field_name == 'designation':
-            # Should be reasonable length
-            return 2 <= len(value) <= 100
         
         elif field_name == 'address':
             # Should be reasonable address length
@@ -692,7 +731,7 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
         
         confidence_scores = {}
         
-        for field_name in ['name', 'pan', 'employee_id', 'designation', 'address']:
+        for field_name in ['name', 'pan', 'employee_id', 'address']:
             confidence_attr = f'_{field_name}_confidence'
             if hasattr(employee_info, confidence_attr):
                 confidence_scores[field_name] = getattr(employee_info, confidence_attr)
@@ -705,3 +744,32 @@ class EmployeeExtractor(IExtractor[EmployeeInfo]):
                     confidence_scores[field_name] = 0.0
         
         return confidence_scores
+    
+    def _populate_from_text_data(self, employee_info: EmployeeInfo, text_data: Dict[str, Any]) -> None:
+        """
+        Populate employee info from text extraction data
+        
+        Args:
+            employee_info: EmployeeInfo object to populate
+            text_data: Dictionary with text-extracted identity data
+        """
+        # Map text extraction field names to EmployeeInfo attributes
+        field_mapping = {
+            'employee_name': 'name',
+            'employee_pan': 'pan',
+            'employee_address': 'address',
+            'employee_reference_number': 'employee_id'
+        }
+        
+        for text_field, model_field in field_mapping.items():
+            if text_field in text_data and text_data[text_field]:
+                value = text_data[text_field].strip()
+                if value and value != 'None':
+                    setattr(employee_info, model_field, value)
+                    # Set high confidence for text-extracted data
+                    confidence_attr = f'_{model_field}_confidence'
+                    if hasattr(employee_info, confidence_attr):
+                        setattr(employee_info, confidence_attr, 0.9)
+                    
+                    self.logger.debug(f"Set {model_field} from text data: {value}")
+    

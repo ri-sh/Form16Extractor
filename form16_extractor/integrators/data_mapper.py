@@ -288,7 +288,7 @@ class Form16ToTaxMapper:
                     total_other_income = Decimal(str(other_income_data.total))
                     
                     # If we have a total but haven't found specific breakdowns,
-                    # try to allocate intelligently
+                    # allocate proportionally
                     if total_other_income > 0 and extracted_income['bank_interest'] == 0 and extracted_income['house_property'] == 0:
                         # Assume it's primarily bank interest for now
                         extracted_income['bank_interest'] = total_other_income

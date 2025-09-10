@@ -66,7 +66,7 @@ python -m pytest tests/unit/extractors/domains/identity/
 python -m pytest tests/unit/extractors/domains/salary/
 ```
 
-## Code Style Code Style
+## Code Style
 
 We use several tools to maintain code quality:
 
@@ -84,7 +84,7 @@ flake8 .
 mypy form16_extractor/
 ```
 
-## 🐛 Reporting Bugs
+## Reporting Bugs
 
 Good bug reports help us fix issues faster. Please include:
 
@@ -119,7 +119,7 @@ Add any other context about the problem here.
 
 **Important**: Never include actual personal data (PAN, names, addresses) in bug reports. Use anonymized/sample data instead.
 
-## Feature Requests Feature Requests
+## Feature Requests
 
 We love new ideas! When suggesting features:
 
@@ -128,7 +128,7 @@ We love new ideas! When suggesting features:
 3. **Propose a solution** - how should it work?
 4. **Consider the scope** - should this be core functionality or a plugin?
 
-## 🔧 Contributing Code
+## Contributing Code
 
 ### Before You Start
 
@@ -196,7 +196,7 @@ Brief description of changes.
 - [ ] No personal/sensitive data in code or tests
 ```
 
-## Development Guidelines Development Guidelines
+## Development Guidelines
 
 ### Code Organization
 
@@ -235,7 +235,7 @@ form16_extractor/
 - **Local processing only** - no network calls
 - **Secure file handling** - proper cleanup of temporary files
 
-## Types of Contributions Types of Contributions We Need
+## Types of Contributions We Need
 
 ### High Priority
 - **Support for new Form16 formats** - different employers use different layouts
@@ -255,7 +255,7 @@ form16_extractor/
 - **Error scenario docs** - how to handle common issues
 - **Integration guides** - using with popular frameworks
 
-## Coding Standards Coding Standards
+## Coding Standards
 
 ### Python Style
 - Follow **PEP 8**

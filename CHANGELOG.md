@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Comprehensive Tax Calculation API (P0 - COMPLETED)
 - **Complete Programmatic API**: Created comprehensive `TaxCalculationAPI` class for standalone tax calculations independent of CLI
 - **Dual Calculation Methods**: Support for both Form16 PDF extraction (`calculate_tax_from_form16`) and manual input (`calculate_tax_from_input`)
-- **Multi-Regime Analysis**: Automatic comparison between old and new tax regimes with intelligent recommendations
-- **Smart Regime Selection**: AI-powered recommendations showing exact annual savings between regimes
+- **Multi-Regime Analysis**: Automatic comparison between old and new tax regimes with recommendations
+- **Regime Selection**: Automated recommendations showing exact annual savings between regimes
 - **Bank Interest Integration**: Automatic Section 80TTA/80TTB deduction calculation for bank interest income
 - **Clean Architecture**: Proper separation of concerns between CLI orchestration and business logic components
 
@@ -306,7 +306,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better handling of custom employer formats
   - Multi-language Form16 support
 
-- **Machine Learning Enhancements(P3)**:
+- **Pattern Recognition Enhancements (P3)**:
   - ML-based field detection for complex layouts
   - Automatic format learning and adaptation
   - Improved confidence scoring algorithms

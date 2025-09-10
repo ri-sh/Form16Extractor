@@ -65,7 +65,6 @@ class EmployeeInfo(BaseModel):
     name: Optional[str] = None
     pan: Optional[str] = None  # Will validate as PAN when populated
     address: Optional[str] = None
-    designation: Optional[str] = None
     department: Optional[str] = None
     employment_type: Optional[str] = None
     employee_id: Optional[str] = None
@@ -432,8 +431,7 @@ class Form16Document(BaseModel):
                     "employee_declaration": {
                         "declaration_date": None,
                         "place": None,
-                        "employee_name": self.employee.name if self.employee else None,
-                        "designation": self.employee.designation if self.employee else None
+                        "employee_name": self.employee.name if self.employee else None
                     }
                 }
             },

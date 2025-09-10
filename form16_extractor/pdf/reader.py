@@ -33,20 +33,27 @@ try:
 except ImportError:
     PDFPLUMBER_AVAILABLE = False
 
+try:
+    import PyPDF2
+    PYPDF2_AVAILABLE = True
+except ImportError:
+    PYPDF2_AVAILABLE = False
+
 
 class ExtractionStrategy(Enum):
-    """PDF table extraction strategies"""
+    """PDF extraction strategies (tables and text)"""
     CAMELOT_LATTICE = "camelot_lattice"
     CAMELOT_STREAM = "camelot_stream"
     TABULA_LATTICE = "tabula_lattice"
     TABULA_STREAM = "tabula_stream"
     PDFPLUMBER = "pdfplumber"
+    TEXT_EXTRACTION = "text_extraction"
     FALLBACK = "fallback"
 
 
 @dataclass
 class TableExtractionResult:
-    """Result of table extraction from PDF"""
+    """Result of table and text extraction from PDF"""
     tables: List[pd.DataFrame]
     strategy_used: ExtractionStrategy
     confidence_score: float
@@ -54,6 +61,8 @@ class TableExtractionResult:
     metadata: Dict[str, Any]
     warnings: List[str]
     page_numbers: List[int]
+    extracted_text: Optional[str] = None
+    text_data: Optional[Dict[str, Any]] = None
 
 
 class IPDFProcessor(ABC):
@@ -88,6 +97,7 @@ class RobustPDFProcessor(IPDFProcessor):
             ExtractionStrategy.TABULA_LATTICE: TABULA_AVAILABLE,
             ExtractionStrategy.TABULA_STREAM: TABULA_AVAILABLE,
             ExtractionStrategy.PDFPLUMBER: PDFPLUMBER_AVAILABLE,
+            ExtractionStrategy.TEXT_EXTRACTION: PYPDF2_AVAILABLE,
             ExtractionStrategy.FALLBACK: True  # Always available
         }
         
@@ -118,10 +128,12 @@ class RobustPDFProcessor(IPDFProcessor):
             ExtractionStrategy.CAMELOT_STREAM,
             ExtractionStrategy.TABULA_LATTICE,
             ExtractionStrategy.PDFPLUMBER,
+            ExtractionStrategy.TEXT_EXTRACTION,
             ExtractionStrategy.FALLBACK
         ]
         
         best_result = None
+        text_extraction_result = None
         all_warnings = []
         
         for strategy in preferred_order:
@@ -131,6 +143,14 @@ class RobustPDFProcessor(IPDFProcessor):
             try:
                 self.logger.debug(f"Trying strategy: {strategy.value}")
                 result = self._extract_with_strategy(pdf_path, strategy)
+                
+                # Handle text extraction separately for hybrid approach
+                if strategy == ExtractionStrategy.TEXT_EXTRACTION:
+                    if result and result.text_data:
+                        self.logger.info(f"Text extraction found {len(result.text_data)} identity fields")
+                        text_extraction_result = result
+                        all_warnings.extend(result.warnings)
+                    continue
                 
                 if result and result.tables:
                     self.logger.info(f"Success with {strategy.value}: {len(result.tables)} tables extracted")
@@ -145,7 +165,7 @@ class RobustPDFProcessor(IPDFProcessor):
                     
                     all_warnings.extend(result.warnings)
                     
-                    # If we got high-confidence results, stop trying
+                    # If we got high-confidence results, stop trying table extraction
                     if confidence > 0.8:
                         break
                         
@@ -154,6 +174,21 @@ class RobustPDFProcessor(IPDFProcessor):
                 self.logger.warning(warning)
                 all_warnings.append(warning)
                 continue
+        
+        # Create hybrid result combining tables and text data
+        if best_result and text_extraction_result:
+            # Combine the best table result with text extraction data
+            best_result.extracted_text = text_extraction_result.extracted_text
+            best_result.text_data = text_extraction_result.text_data
+            best_result.metadata.update({
+                'hybrid_extraction': True,
+                'text_fields_found': len(text_extraction_result.text_data)
+            })
+            self.logger.info("Created hybrid result combining table and text extraction")
+        elif text_extraction_result and not best_result:
+            # Use text extraction as fallback if no table extraction succeeded
+            best_result = text_extraction_result
+            self.logger.info("Using text extraction as primary result")
         
         processing_time = time.time() - start_time
         
@@ -194,6 +229,9 @@ class RobustPDFProcessor(IPDFProcessor):
         
         elif strategy == ExtractionStrategy.PDFPLUMBER:
             return self._extract_with_pdfplumber(pdf_path)
+        
+        elif strategy == ExtractionStrategy.TEXT_EXTRACTION:
+            return self._extract_with_text_extraction(pdf_path)
         
         elif strategy == ExtractionStrategy.FALLBACK:
             return self._extract_with_fallback(pdf_path)
@@ -364,6 +402,92 @@ class RobustPDFProcessor(IPDFProcessor):
             page_numbers=page_numbers
         )
     
+    def _extract_with_text_extraction(self, pdf_path: Path) -> TableExtractionResult:
+        """Extract using text-based patterns"""
+        if not PYPDF2_AVAILABLE:
+            raise ImportError("PyPDF2 not available for text extraction")
+        
+        # Import identity text extractor
+        from ..extractors.domains.identity.text_extractor import create_identity_text_extractor
+        
+        text_extractor = create_identity_text_extractor()
+        warnings = []
+        
+        try:
+            # Extract text from PDF using PyPDF2
+            pdf_text = self._extract_pdf_text(pdf_path)
+            
+            if not pdf_text:
+                warnings.append("No text could be extracted from PDF")
+                return TableExtractionResult(
+                    tables=[],
+                    strategy_used=ExtractionStrategy.TEXT_EXTRACTION,
+                    confidence_score=0.0,
+                    processing_time=0.0,
+                    metadata={'text_length': 0},
+                    warnings=warnings,
+                    page_numbers=[],
+                    extracted_text=pdf_text,
+                    text_data={}
+                )
+            
+            # Extract identity data using text patterns
+            identity_data = text_extractor.extract_from_text(pdf_text)
+            validated_data = text_extractor.validate_extracted_data(identity_data)
+            
+            self.logger.info(f"Text extraction found {len(validated_data)} identity fields")
+            
+            return TableExtractionResult(
+                tables=[],  # Text extraction doesn't produce tables
+                strategy_used=ExtractionStrategy.TEXT_EXTRACTION,
+                confidence_score=0.7 if validated_data else 0.1,
+                processing_time=0.0,
+                metadata={'text_length': len(pdf_text), 'fields_extracted': len(validated_data)},
+                warnings=warnings,
+                page_numbers=[],
+                extracted_text=pdf_text,
+                text_data=validated_data
+            )
+            
+        except Exception as e:
+            warning = f"Text extraction failed: {str(e)}"
+            self.logger.error(warning)
+            warnings.append(warning)
+            
+            return TableExtractionResult(
+                tables=[],
+                strategy_used=ExtractionStrategy.TEXT_EXTRACTION,
+                confidence_score=0.0,
+                processing_time=0.0,
+                metadata={'error': str(e)},
+                warnings=warnings,
+                page_numbers=[],
+                extracted_text=None,
+                text_data={}
+            )
+    
+    def _extract_pdf_text(self, pdf_path: Path) -> str:
+        """Extract text from PDF using PyPDF2"""
+        try:
+            import PyPDF2
+            
+            text_content = []
+            
+            with open(pdf_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfFileReader(file)
+                
+                for page_num in range(pdf_reader.numPages):
+                    page = pdf_reader.getPage(page_num)
+                    page_text = page.extractText()
+                    if page_text:
+                        text_content.append(page_text)
+            
+            return '\n'.join(text_content)
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting text from PDF: {str(e)}")
+            return ""
+    
     def _extract_with_fallback(self, pdf_path: Path) -> TableExtractionResult:
         """Fallback extraction method"""
         self.logger.info("Using fallback extraction strategy")
@@ -414,6 +538,7 @@ class RobustPDFProcessor(IPDFProcessor):
             ExtractionStrategy.TABULA_LATTICE: 0.7,
             ExtractionStrategy.TABULA_STREAM: 0.6,
             ExtractionStrategy.PDFPLUMBER: 0.5,
+            ExtractionStrategy.TEXT_EXTRACTION: 0.8,
             ExtractionStrategy.FALLBACK: 0.1
         }.get(strategy, 0.5)
         

@@ -304,6 +304,7 @@ Examples:
                 
                 extraction_result = self.pdf_processor.extract_tables(input_file)
                 tables = extraction_result.tables
+                text_data = getattr(extraction_result, 'text_data', None)
                 # No artificial delay - PDF extraction is already slow enough
                 
                 # Stage 3: Classifying tables
@@ -318,7 +319,7 @@ Examples:
                 
                 # Stage 5: Extract Form16 data
                 progress.advance_stage(Form16ProcessingStages.EXTRACTING_JSON)
-                form16_result = self.extractor.extract_all(tables)
+                form16_result = self.extractor.extract_all(tables, text_data=text_data)
                 processing_time = time.time() - start_time
                 
                 # Use proper Form16 JSON builder for correct Part A/Part B structure
@@ -372,7 +373,7 @@ Examples:
                 print(f"\nExtraction completed successfully!")
                 print(f"Input: {input_file}")
                 if not args.calculate_tax:
-                    print(f" Tip: Use --output to save results to file, or --calculate-tax for tax computation")
+                    print(f"Note: Use --output to save results to file, or --calculate-tax for tax computation")
             
             print(f"Processing time: {result['metadata']['processing_time_seconds']:.2f} seconds")
             
@@ -490,13 +491,13 @@ Examples:
                 print(f"Extraction was not successful: {data.get('error', 'Unknown error')}")
                 return 1
             
-            # Validate form16_data structure
-            if 'form16_data' not in data:
-                print("Missing 'form16_data' field")
+            # Validate form16 structure
+            if 'form16' not in data:
+                print("Missing 'form16' field")
                 return 1
             
-            form16_data = data['form16_data']
-            required_sections = ['employee_info', 'employer_info', 'salary_breakdown']
+            form16_data = data['form16']
+            required_sections = ['part_a', 'part_b']
             
             for section in required_sections:
                 if section not in form16_data:
@@ -504,19 +505,46 @@ Examples:
                     if args.strict:
                         return 1
                 else:
-                    print(f"Found section: {section}")
+                    print(f"✅ Found section: {section}")
             
-            # Check extraction summary
-            if 'extraction_summary' in data:
-                summary = data['extraction_summary']
+            # Validate key fields
+            part_a = form16_data.get('part_a', {})
+            employee = part_a.get('employee', {})
+            employer = part_a.get('employer', {})
+            
+            if employee.get('name'):
+                print(f"✅ Employee name: {employee['name']}")
+            else:
+                print("⚠️  Warning: Employee name missing")
+                
+            if employee.get('pan'):
+                print(f"✅ Employee PAN: {employee['pan']}")
+            else:
+                print("⚠️  Warning: Employee PAN missing")
+                
+            if employer.get('name'):
+                print(f"✅ Employer: {employer['name']}")
+            else:
+                print("⚠️  Warning: Employer name missing")
+            
+            part_b = form16_data.get('part_b', {})
+            gross_salary = part_b.get('gross_salary', {})
+            if gross_salary.get('total'):
+                print(f"✅ Gross Salary: ₹{gross_salary['total']:,.0f}")
+            else:
+                print("⚠️  Warning: Gross salary missing")
+            
+            # Check extraction metrics
+            if 'extraction_metrics' in data:
+                summary = data['extraction_metrics']['extraction_summary']
                 rate = summary.get('extraction_rate', 0)
-                print(f"Extraction rate: {rate:.1f}%")
+                print(f"📊 Extraction rate: {rate:.1f}% ({summary['extracted_fields']}/{summary['total_fields']} fields)")
                 
                 if rate < 50 and args.strict:
                     print("Extraction rate too low for strict mode")
                     return 1
             
-            print("Validation passed!")
+            print("✅ Validation passed!")
             return 0
             
         except Exception as e:
@@ -1044,7 +1072,8 @@ Examples:
                     
                     # Extract tables and Form16 data
                     extraction_result = self.pdf_processor.extract_tables(form16_file)
-                    form16_result = self.extractor.extract_all(extraction_result.tables)
+                    text_data = getattr(extraction_result, 'text_data', None)
+                    form16_result = self.extractor.extract_all(extraction_result.tables, text_data=text_data)
                     
                     # Build comprehensive JSON
                     form16_json = Form16JSONBuilder.build_comprehensive_json(

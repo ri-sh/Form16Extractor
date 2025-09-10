@@ -138,7 +138,7 @@ class Form16JSONBuilder:
             
             "deductions_under_section_16": Form16JSONBuilder._build_section_16(doc),
             
-            "income_chargeable_under_salaries": None,
+            "income_chargeable_under_salaries": doc.salary.net_taxable_salary if doc.salary and hasattr(doc.salary, 'net_taxable_salary') else None,
             
             "other_income": {
                 "income_from_house_property": None,
@@ -146,11 +146,11 @@ class Form16JSONBuilder:
                 "total": None
             },
             
-            "gross_total_income": None,
+            "gross_total_income": doc.tax_computation.gross_total_income if doc.tax_computation and hasattr(doc.tax_computation, 'gross_total_income') else None,
             
             "chapter_vi_a_deductions": Form16JSONBuilder._build_chapter_vi_a(doc),
             
-            "total_taxable_income": None,
+            "total_taxable_income": doc.tax_computation.net_taxable_income if doc.tax_computation and hasattr(doc.tax_computation, 'net_taxable_income') else None,
             
             "tax_computation": Form16JSONBuilder._build_tax_computation(doc),
             
@@ -186,7 +186,6 @@ class Form16JSONBuilder:
                 "declaration_date": None,
                 "place": None,
                 "employee_name": doc.employee.name if doc.employee else None,
-                "designation": doc.employee.designation if doc.employee else None
             }
         }
     

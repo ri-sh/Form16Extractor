@@ -3,7 +3,7 @@
 Table Intelligence System
 ========================
 
-Orchestrates intelligent table routing and processing using the TableScorer
+Orchestrates table routing and processing using the TableScorer
 infrastructure component. Improves extraction accuracy by 20-30% through
 optimal table selection and relevance-based routing.
 
@@ -44,7 +44,7 @@ class IntelligenceReport:
 
 class TableIntelligence:
     """
-    Intelligent table processing system that optimizes table-to-extractor routing.
+    Table processing system that optimizes table-to-extractor routing.
     
     Uses the TableScorer component to analyze table relevance and route tables
     to the most appropriate extractors, dramatically improving accuracy.
@@ -99,7 +99,7 @@ class TableIntelligence:
         # Score tables for all domains
         domain_scores = self.scorer.score_all_domains(tables)
         
-        # Allocate tables to domains using intelligent routing
+        # Allocate tables to domains using optimized routing
         allocations = self._allocate_tables_to_domains(tables, domain_scores)
         
         # Generate performance analysis
@@ -271,7 +271,7 @@ class TableIntelligence:
         tables: List[Dict[str, Any]], 
         domain_scores: Dict[str, List[TableScore]]
     ) -> List[TableAllocation]:
-        """Allocate tables to domains using intelligent conflict resolution"""
+        """Allocate tables to domains using conflict resolution"""
         allocations = []
         
         # Create allocation matrix: table_index -> domain -> score

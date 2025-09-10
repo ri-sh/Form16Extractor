@@ -51,7 +51,7 @@ class ZeroValueDecision:
 
 class ZeroValueHandler:
     """
-    Infrastructure component for intelligent zero-value recognition.
+    Infrastructure component for zero-value recognition and handling.
     
     Dramatically improves extraction rates by recognizing when zero/null
     is the correct value rather than an extraction failure.
@@ -287,11 +287,8 @@ class ZeroValueHandler:
         
         # Analyze employee information  
         if result.employee:
-            employee_info = (result.employee.designation or '').lower()
-            for category, keywords in self.context_indicators.items():
-                if any(keyword in employee_info for keyword in keywords):
-                    if category in ['low_income', 'senior_position']:
-                        context['employee_level'] = category
+            # Note: designation field removed, skip employee level analysis
+            pass
         
         # Analyze income level
         if result.salary and result.salary.gross_salary:

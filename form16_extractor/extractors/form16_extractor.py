@@ -6,7 +6,7 @@ Modular Simple Form16 Extractor
 Refactored version of simple_extractor.py using modular components.
 Maintains all functionality while improving maintainability.
 
-Staff Software Engineer approach:
+Engineering approach:
 - Extract complex logic into focused components
 - Use composition over inheritance  
 - Maintain working extraction strategies
@@ -86,14 +86,15 @@ class ModularSimpleForm16Extractor:
         self.metadata_component.logger = self.logger
         self.tds_component.logger = self.logger
         
-        # Initialize proper table classifier (CRITICAL FIX!)
+        # Initialize proper table classifier
         self.classifier = get_simple_table_classifier()
         
         self.logger.info("Initialized modular Form16 extractor with production error handling")
     
     def extract_all(self, tables: List[pd.DataFrame], 
                    page_numbers: Optional[List[int]] = None,
-                   classifier=None) -> Form16Document:
+                   classifier=None,
+                   text_data: Optional[Dict[str, Any]] = None) -> Form16Document:
         """
         Extract complete Form16 data using modular components with error handling.
         
@@ -128,7 +129,7 @@ class ModularSimpleForm16Extractor:
         form16_doc = Form16Document()
         
         try:
-            # Classify tables using proper classifier (CRITICAL FIX!)
+            # Classify tables using proper classifier
             classifications = []
             total_pages = max(page_numbers) if page_numbers else len(tables)
             
@@ -162,7 +163,7 @@ class ModularSimpleForm16Extractor:
             # 1. Extract employee information with error handling
             employee_data, emp_errors, emp_warnings = self.error_handler.safe_extract_component(
                 "employee", 
-                lambda: self.employee_extractor.extract_with_confidence(tables),
+                lambda: self.employee_extractor.extract_with_confidence(tables, text_data),
                 required=True,
                 fallback_value=None
             )
@@ -316,7 +317,7 @@ class ModularSimpleForm16Extractor:
         
         self.logger.info("Running legacy extraction mode (no error handling)")
         
-        # Classify tables using proper classifier (CRITICAL FIX!)
+        # Classify tables using proper classifier
         classifications = []
         total_pages = max(page_numbers) if page_numbers else len(tables)
         
@@ -353,7 +354,7 @@ class ModularSimpleForm16Extractor:
         try:
             # 1. Extract employee information (using proven extractor)
             self.logger.debug("Extracting employee information...")
-            employee_result = self.employee_extractor.extract_with_confidence(tables)
+            employee_result = self.employee_extractor.extract_with_confidence(tables, text_data)
             form16_doc.employee = employee_result.data
             extraction_strategies['employee'] = {
                 'strategy': 'proven_employee_extractor',
