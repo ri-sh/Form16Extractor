@@ -29,25 +29,19 @@ class RichUIComponents:
         self.console = Console()
     
     def show_animated_header(self, title: str, subtitle: str = ""):
-        """Show animated header with title and subtitle"""
-        # Create animated border
-        for i in range(3):
-            if i < 2:
-                border_char = "━" if i == 0 else "═"
-                self.console.print(f"[bold blue]{border_char * 80}[/bold blue]")
-                time.sleep(0.1)
-        
-        # Main title with animation
-        title_text = Text(title, style="bold magenta", justify="center")
-        title_panel = Panel(title_text, box=DOUBLE, border_style="bright_blue")
-        self.console.print(title_panel)
+        """Show clean, minimal header with title and subtitle"""
+        # Simple clean header without heavy animations
+        title_text = Text(title, style="bold cyan")
+        self.console.print(Align.center(title_text))
         
         if subtitle:
-            subtitle_text = Text(subtitle, style="italic cyan", justify="center")
+            subtitle_text = Text(subtitle, style="dim white")
             self.console.print(Align.center(subtitle_text))
-            self.console.print()
         
-        time.sleep(0.3)
+        # Simple separator line
+        separator = "─" * 60
+        self.console.print(Align.center(Text(separator, style="dim blue")))
+        self.console.print()
     
     def create_salary_tree(self, salary_data: Dict[str, Any], show_percentages: bool = False) -> Tree:
         """Create a rich tree structure for salary breakdown"""

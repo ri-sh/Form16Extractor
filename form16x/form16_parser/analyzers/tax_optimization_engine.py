@@ -29,8 +29,13 @@ class TaxOptimizationEngine:
             '80D': Decimal('25000'),     # Self + family
             '80D_PARENTS': Decimal('25000'),  # Parents (additional)
             '80TTA': Decimal('10000'),   # Savings account interest
+            '80TTB': Decimal('50000'),   # Senior citizen interest
             '80EE': Decimal('50000'),    # Home loan interest (first time buyers)
             '80EEA': Decimal('150000'),  # Home loan interest (affordable housing)
+            '80E': Decimal('999999'),    # Education loan interest (no limit)
+            '80G': Decimal('999999'),    # Charitable donations (no fixed limit, depends on income)
+            '80U': Decimal('75000'),     # Disability deduction
+            '80GG': Decimal('60000'),    # Rent paid (when no HRA)
         }
         
         # Tax rates for calculating savings (approximate for middle income)
@@ -126,6 +131,16 @@ class TaxOptimizationEngine:
         # Home loan interest suggestions
         suggestions.extend(self._suggest_home_loan_optimization(current_deductions, marginal_rate))
         
+        # HRA optimization suggestions (only for old regime)
+        if regime == 'old':
+            suggestions.extend(self._suggest_hra_optimization(form16_data, marginal_rate))
+        
+        # Additional investment and deduction opportunities (old regime only)
+        if regime == 'old':
+            suggestions.extend(self._suggest_charitable_donations(form16_data, marginal_rate))
+            suggestions.extend(self._suggest_education_loan_optimization(form16_data, marginal_rate))
+            suggestions.extend(self._suggest_senior_citizen_benefits(form16_data, marginal_rate))
+        
         # Sort by potential savings (highest first)
         suggestions.sort(key=lambda x: x.potential_tax_savings, reverse=True)
         
@@ -164,22 +179,47 @@ class TaxOptimizationEngine:
                 ]
             ))
         
-        # ELSS Mutual Funds
+        # ELSS Mutual Funds - Top Priority for younger investors
         if remaining_limit >= Decimal('25000'):
+            elss_amount = min(remaining_limit, Decimal('100000'))
             suggestions.append(TaxOptimizationSuggestion(
-                title="Equity Linked Savings Scheme (ELSS)",
-                description="Mutual fund investment with 3-year lock-in and potential for higher returns",
-                investment_type="80C Investment",
-                suggested_amount=min(remaining_limit, Decimal('100000')),
-                potential_tax_savings=min(remaining_limit, Decimal('100000')) * marginal_rate,
+                title="ELSS Mutual Funds (Tax Saver)",
+                description="Best tax-saving option: equity MF with 3-year lock-in, potential 12-15% returns",
+                investment_type="Mutual Fund - ELSS",
+                suggested_amount=elss_amount,
+                potential_tax_savings=elss_amount * marginal_rate,
                 difficulty=OptimizationDifficulty.EASY,
                 section="80C",
                 current_utilization=current_80c,
                 max_limit=self.deduction_limits['80C'],
                 implementation_steps=[
-                    "Choose reputable fund house (SBI, HDFC, ICICI)",
-                    "Start monthly SIP for rupee cost averaging",
-                    "Monitor performance quarterly"
+                    "Open demat account or invest through fund house directly",
+                    "Choose top-performing ELSS funds (Axis Long Term Equity, Mirae Asset Tax Saver)",
+                    "Start monthly SIP of ₹8,500 for ₹1L annual investment",
+                    "Complete KYC and link bank account for auto-debit",
+                    "Track NAV and performance on monthly basis"
+                ]
+            ))
+        
+        # Large Cap ELSS for Conservative Investors
+        if remaining_limit >= Decimal('50000'):
+            conservative_amount = min(remaining_limit, Decimal('75000'))
+            suggestions.append(TaxOptimizationSuggestion(
+                title="Conservative ELSS Funds",
+                description="Large-cap focused ELSS for stable returns with lower volatility",
+                investment_type="Mutual Fund - ELSS (Conservative)",
+                suggested_amount=conservative_amount,
+                potential_tax_savings=conservative_amount * marginal_rate,
+                difficulty=OptimizationDifficulty.EASY,
+                section="80C",
+                current_utilization=current_80c,
+                max_limit=self.deduction_limits['80C'],
+                implementation_steps=[
+                    "Choose large-cap oriented ELSS funds for stability",
+                    "Consider SBI Long Term Equity Fund or HDFC TaxSaver",
+                    "Set up monthly SIP for disciplined investing",
+                    "Review fund performance annually",
+                    "Maintain emergency fund alongside ELSS investment"
                 ]
             ))
         
@@ -264,10 +304,11 @@ class TaxOptimizationEngine:
         if remaining_limit <= 0:
             return suggestions
         
+        # NPS Tier-I Account - Primary Retirement Planning
         suggestions.append(TaxOptimizationSuggestion(
-            title="National Pension Scheme (NPS) - Additional Investment",
-            description="Additional NPS investment under Section 80CCD(1B) over and above 80C limit",
-            investment_type="Retirement Planning",
+            title="NPS Tier-I Additional Contribution",
+            description="Extra ₹50,000 tax deduction over 80C limit | Best for long-term retirement planning",
+            investment_type="Retirement Planning - NPS",
             suggested_amount=remaining_limit,
             potential_tax_savings=remaining_limit * marginal_rate,
             difficulty=OptimizationDifficulty.MODERATE,
@@ -275,12 +316,34 @@ class TaxOptimizationEngine:
             current_utilization=current_80ccd_1b,
             max_limit=self.deduction_limits['80CCD_1B'],
             implementation_steps=[
-                "Open NPS account if not already available",
-                "Make additional contribution beyond employer contribution",
-                "Choose appropriate asset allocation based on age",
-                "Set up systematic investment for regular contributions"
+                "Open NPS Tier-I account through bank or online (eNPS)",
+                "Choose Aggressive/Moderate/Conservative asset allocation based on age",
+                "Set up monthly auto-debit for systematic contribution",
+                "Monitor fund performance and rebalance annually",
+                "Remember: 60% corpus tax-free at retirement, 40% compulsory annuity"
             ]
         ))
+        
+        # Add Corporate NPS guidance if applicable
+        if remaining_limit >= Decimal('30000'):
+            suggestions.append(TaxOptimizationSuggestion(
+                title="Corporate NPS Enhancement",
+                description="Maximize employer NPS matching + additional 80CCD(1B) contribution",
+                investment_type="Employer-Matched Retirement",
+                suggested_amount=min(remaining_limit, Decimal('50000')),
+                potential_tax_savings=min(remaining_limit, Decimal('50000')) * marginal_rate,
+                difficulty=OptimizationDifficulty.EASY,
+                section="80CCD(1B)",
+                current_utilization=current_80ccd_1b,
+                max_limit=self.deduction_limits['80CCD_1B'],
+                implementation_steps=[
+                    "Check if employer offers NPS with matching contribution",
+                    "Maximize employer matching first (free money)",
+                    "Top up to ₹50,000 limit for maximum tax benefit",
+                    "Choose equity-heavy allocation if age < 40",
+                    "Review and rebalance portfolio annually"
+                ]
+            ))
         
         return suggestions
     
@@ -440,3 +503,212 @@ class TaxOptimizationEngine:
         ))
         
         return analysis
+    
+    def _suggest_hra_optimization(self, form16_data: Dict[str, Any], marginal_rate: Decimal) -> List[TaxOptimizationSuggestion]:
+        """Suggest HRA optimization opportunities (only applicable in old regime)"""
+        suggestions = []
+        
+        try:
+            # Extract current salary and HRA information
+            salary_data = form16_data.get('form16', {}).get('part_b', {})
+            current_gross = Decimal(str(salary_data.get('gross_salary', {}).get('total', 2500000)))  # Demo default
+            current_basic = Decimal(str(current_gross * Decimal('0.5')))  # Assume 50% basic
+            
+            # Get current HRA from allowances exempt under section 10
+            allowances_exempt = salary_data.get('allowances_exempt_under_section_10', {})
+            current_hra_received = Decimal(str(allowances_exempt.get('house_rent_allowance', 0)))
+            
+            # Calculate optimal HRA structure based on 2024-25 rules
+            # Metro cities: 50% of basic salary, Non-metro: 40% of basic salary
+            optimal_hra_metro = current_basic * Decimal('0.5')  # 50% of basic for metro
+            optimal_hra_non_metro = current_basic * Decimal('0.4')  # 40% of basic for non-metro
+            
+            # If current HRA is significantly less than optimal, suggest restructuring
+            if current_hra_received < optimal_hra_metro * Decimal('0.6'):  # If less than 60% of optimal
+                
+                # Metro city HRA optimization
+                additional_hra_metro = optimal_hra_metro - current_hra_received
+                if additional_hra_metro > Decimal('50000'):  # Only suggest if meaningful amount
+                    
+                    tax_savings_metro = additional_hra_metro * marginal_rate
+                    
+                    suggestions.append(TaxOptimizationSuggestion(
+                        title="HRA Salary Restructuring (Metro)",
+                        description="Optimize salary structure for maximum HRA benefits in metro cities (50% of basic)",
+                        investment_type="Salary Restructuring",
+                        suggested_amount=additional_hra_metro,
+                        potential_tax_savings=tax_savings_metro,
+                        difficulty=OptimizationDifficulty.MODERATE,
+                        section="10(13A)",
+                        current_utilization=current_hra_received,
+                        max_limit=optimal_hra_metro,
+                        implementation_steps=[
+                            "Negotiate salary restructuring with HR",
+                            "Increase HRA to 50% of basic salary",
+                            "Ensure actual rent documentation",
+                            "Submit Form 12BB with rent receipts",
+                            "Get landlord's PAN if rent > ₹1 lakh annually"
+                        ]
+                    ))
+                
+                # Non-metro city HRA optimization  
+                additional_hra_non_metro = optimal_hra_non_metro - current_hra_received
+                if additional_hra_non_metro > Decimal('40000'):  # Only suggest if meaningful amount
+                    
+                    tax_savings_non_metro = additional_hra_non_metro * marginal_rate
+                    
+                    suggestions.append(TaxOptimizationSuggestion(
+                        title="HRA Salary Restructuring (Non-Metro)",
+                        description="Optimize salary structure for maximum HRA benefits in non-metro cities (40% of basic)",
+                        investment_type="Salary Restructuring", 
+                        suggested_amount=additional_hra_non_metro,
+                        potential_tax_savings=tax_savings_non_metro,
+                        difficulty=OptimizationDifficulty.MODERATE,
+                        section="10(13A)",
+                        current_utilization=current_hra_received,
+                        max_limit=optimal_hra_non_metro,
+                        implementation_steps=[
+                            "Negotiate salary restructuring with HR",
+                            "Increase HRA to 40% of basic salary",
+                            "Ensure actual rent documentation",
+                            "Submit Form 12BB with rent receipts", 
+                            "Get landlord's PAN if rent > ₹1 lakh annually"
+                        ]
+                    ))
+            
+            # Alternative: Section 80GG for those without HRA
+            if current_hra_received == 0:
+                section_80gg_benefit = min(Decimal('60000'), current_gross * Decimal('0.25'))  # ₹5k/month or 25% of income
+                if section_80gg_benefit > Decimal('20000'):
+                    tax_savings_80gg = section_80gg_benefit * marginal_rate
+                    
+                    suggestions.append(TaxOptimizationSuggestion(
+                        title="Rent Deduction under Section 80GG",
+                        description="Claim rent deduction when HRA is not provided by employer",
+                        investment_type="Rent Deduction",
+                        suggested_amount=section_80gg_benefit,
+                        potential_tax_savings=tax_savings_80gg,
+                        difficulty=OptimizationDifficulty.EASY,
+                        section="80GG",
+                        current_utilization=Decimal('0'),
+                        max_limit=section_80gg_benefit,
+                        implementation_steps=[
+                            "Ensure you don't receive HRA from employer",
+                            "Maintain rent receipts and agreements",
+                            "File Form 10BA with ITR",
+                            "Ensure rent payment through traceable methods",
+                            "You or spouse should not own house in same city"
+                        ]
+                    ))
+        
+        except Exception as e:
+            self.logger.error(f"Error generating HRA suggestions: {e}")
+        
+        return suggestions
+    
+    def _suggest_charitable_donations(self, form16_data: Dict[str, Any], marginal_rate: Decimal) -> List[TaxOptimizationSuggestion]:
+        """Suggest charitable donation opportunities under Section 80G"""
+        suggestions = []
+        
+        try:
+            # Extract current income to calculate donation potential
+            salary_data = form16_data.get('form16', {}).get('part_b', {})
+            current_gross = Decimal(str(salary_data.get('gross_salary', {}).get('total', 2500000)))  # Demo default
+            
+            # Section 80G allows deduction up to 10% of adjusted gross total income for many charities
+            max_donation_benefit = current_gross * Decimal('0.10')  # 10% of income
+            suggested_donation = min(max_donation_benefit, Decimal('50000'))  # Suggest reasonable amount
+            
+            if suggested_donation >= Decimal('5000'):
+                tax_savings = suggested_donation * marginal_rate
+                
+                suggestions.append(TaxOptimizationSuggestion(
+                    title="Charitable Donations (Section 80G)",
+                    description="Tax-deductible donations to approved charities - do good while saving tax",
+                    investment_type="Charitable Contribution",
+                    suggested_amount=suggested_donation,
+                    potential_tax_savings=tax_savings,
+                    difficulty=OptimizationDifficulty.EASY,
+                    section="80G",
+                    current_utilization=Decimal('0'),
+                    max_limit=max_donation_benefit,
+                    implementation_steps=[
+                        "Choose eligible charities with 80G certificate",
+                        "Consider PM CARES Fund (100% deduction)",
+                        "Donate to approved NGOs, educational institutions",
+                        "Keep donation receipts with 80G certificate",
+                        "Ensure donations are through traceable methods (not cash)"
+                    ]
+                ))
+        
+        except Exception as e:
+            self.logger.error(f"Error generating charitable donation suggestions: {e}")
+        
+        return suggestions
+    
+    def _suggest_education_loan_optimization(self, form16_data: Dict[str, Any], marginal_rate: Decimal) -> List[TaxOptimizationSuggestion]:
+        """Suggest education loan interest deduction under Section 80E"""
+        suggestions = []
+        
+        try:
+            # This is mainly informational since we can't determine if user has education loan
+            # But important to mention for completeness
+            potential_interest_amount = Decimal('100000')  # Example annual interest
+            tax_savings = potential_interest_amount * marginal_rate
+            
+            suggestions.append(TaxOptimizationSuggestion(
+                title="Education Loan Interest Deduction",
+                description="Unlimited deduction for education loan interest (self/spouse/children)",
+                investment_type="Education Loan Benefit",
+                suggested_amount=potential_interest_amount,
+                potential_tax_savings=tax_savings,
+                difficulty=OptimizationDifficulty.EASY,
+                section="80E",
+                current_utilization=Decimal('0'),
+                max_limit=Decimal('999999'),  # No limit
+                implementation_steps=[
+                    "Ensure education loan is from approved financial institution",
+                    "Loan must be for higher education (self, spouse, children)",
+                    "Keep interest certificate from bank/NBFC",
+                    "Claim full interest amount paid during the year",
+                    "Deduction available for maximum 8 years or until loan is repaid"
+                ]
+            ))
+        
+        except Exception as e:
+            self.logger.error(f"Error generating education loan suggestions: {e}")
+        
+        return suggestions
+    
+    def _suggest_senior_citizen_benefits(self, form16_data: Dict[str, Any], marginal_rate: Decimal) -> List[TaxOptimizationSuggestion]:
+        """Suggest senior citizen specific tax benefits"""
+        suggestions = []
+        
+        try:
+            # Section 80TTB for senior citizens (interest income)
+            senior_interest_benefit = Decimal('50000')  # ₹50,000 limit for senior citizens
+            tax_savings = senior_interest_benefit * marginal_rate
+            
+            suggestions.append(TaxOptimizationSuggestion(
+                title="Senior Citizen Interest Income Benefit",
+                description="₹50,000 deduction on interest income for senior citizens (60+ years)",
+                investment_type="Senior Citizen Benefit",
+                suggested_amount=senior_interest_benefit,
+                potential_tax_savings=tax_savings,
+                difficulty=OptimizationDifficulty.EASY,
+                section="80TTB",
+                current_utilization=Decimal('0'),
+                max_limit=self.deduction_limits['80TTB'],
+                implementation_steps=[
+                    "Applicable only if you/parents are 60+ years old",
+                    "Optimize bank FD/savings account interest",
+                    "Consider tax-free bonds for senior citizens",
+                    "Higher basic exemption limit (₹3 lakh for 60-80 years)",
+                    "Additional health insurance deduction limit (₹50,000)"
+                ]
+            ))
+        
+        except Exception as e:
+            self.logger.error(f"Error generating senior citizen suggestions: {e}")
+        
+        return suggestions

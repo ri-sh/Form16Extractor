@@ -112,13 +112,15 @@ class ModularSimpleForm16Extractor:
         
         # Use error handler if available, otherwise use legacy direct approach
         if self.error_handler:
-            return self._extract_with_error_handling(tables, page_numbers, classifier, start_time)
+            return self._extract_with_error_handling(tables, page_numbers, classifier, text_data, start_time)
         else:
             return self._extract_legacy(tables, page_numbers, classifier)
     
     def _extract_with_error_handling(self, tables: List[pd.DataFrame], 
                                    page_numbers: Optional[List[int]] = None,
-                                   classifier=None, start_time: float = None) -> Form16Document:
+                                   classifier=None,
+                                   text_data: Optional[Dict[str, Any]] = None,
+                                   start_time: float = None) -> Form16Document:
         """Extract with comprehensive error handling and recovery"""
         
         all_errors = []
