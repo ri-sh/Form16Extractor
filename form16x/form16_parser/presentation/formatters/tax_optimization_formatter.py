@@ -57,10 +57,11 @@ class TaxOptimizationFormatter:
     
     def _display_demo_situation(self, analysis_result: Dict[str, Any]) -> None:
         """Display demo mode tax situation."""
-        current_tax = analysis_result.get('current_tax_liability', 78723)
-        current_taxable_income = analysis_result.get('current_taxable_income', 862724)
+
+        current_tax = analysis_result.get('current_tax_liability', 331250)
+        current_taxable_income = analysis_result.get('current_taxable_income', 2125000)
         recommended_regime = analysis_result.get('recommended_regime', 'new')
-        tax_savings = analysis_result.get('tax_savings', 25000)
+        tax_savings = analysis_result.get('tax_savings', 136750)
         
         self.ui.console.print("\n[bold blue]═══════════════════════════════════════════════════════════════════════════════[/bold blue]")
         self.ui.console.print("[bold blue]                        Current Tax Situation Analysis                        [/bold blue]")
@@ -88,8 +89,8 @@ class TaxOptimizationFormatter:
         
         # Determine baseline tax for both regimes
         if analysis_result.get('demo_mode'):
-            baseline_old_tax = 103723.0  # Demo old regime tax
-            baseline_new_tax = 78723.0   # Demo new regime tax
+            baseline_old_tax = 468000.0  # Demo old regime tax (₹25L salary)
+            baseline_new_tax = 331250.0  # Demo new regime tax (₹25L salary)
             current_regime = analysis_result.get('recommended_regime', 'new')
         else:
             tax_calculations = analysis_result.get('tax_calculations', {})
@@ -156,7 +157,7 @@ class TaxOptimizationFormatter:
             step_indicator = ["[green]●[/green]", "[yellow]●[/yellow]", "[red]●[/red]", "[dim]●[/dim]"][step_number-1] if step_number <= 4 else "[dim]●[/dim]"
             difficulty_level = {"easy": "Easy", "moderate": "Medium", "difficult": "Advanced"}.get(suggestion.difficulty.value, "Medium")
             
-            self.ui.console.print(f"\n{step_indicator} [bold blue]Optimization #{step_number}[/bold blue] [{difficulty_level.lower()}]{difficulty_level}[/{difficulty_level.lower()}] [dim](recommended by 89% of tax advisors)[/dim]")
+            self.ui.console.print(f"\n{step_indicator} [bold blue]Optimization #{step_number}[/bold blue] [{difficulty_level.lower()}]{difficulty_level}[/{difficulty_level.lower()}]")
             self.ui.console.print(f"[bold white]{suggestion.title}[/bold white]")
             
             # Investment details
@@ -261,32 +262,49 @@ class TaxOptimizationFormatter:
         self.ui.console.print(f"[dim]Most tax-saving investments have deadlines. Don't lose this ₹{total_journey_savings:,.0f} opportunity![/dim]")
     
     def _display_additional_opportunities(self, analysis_result: Dict[str, Any]) -> None:
-        """Display additional opportunities based on regime."""
+        """Display additional opportunities based on regime and actual Form16 data."""
         recommended_regime = analysis_result.get('recommended_regime', 'new')
         
-        if recommended_regime == 'new':
+        # Extract actual salary data from Form16 if available
+        form16_data = analysis_result.get('form16_data', {})
+        gross_salary = 0
+        if form16_data.get('form16', {}).get('part_b', {}).get('gross_salary'):
+            gross_salary = form16_data['form16']['part_b']['gross_salary'].get('total', 0)
+        elif analysis_result.get('demo_mode'):
+            gross_salary = 2125000  # Demo salary amount
+        
+        if recommended_regime == 'new' and gross_salary > 0:
             self.ui.console.print(f"\n[bold blue]Additional Opportunities (OLD Regime Only):[/bold blue]")
             
-            # Show comprehensive OLD regime benefits
+            # Calculate realistic HRA based on salary
+            max_hra_exemption = min(gross_salary * 0.5, 300000)  # 50% of salary or ₹3L, whichever is lower
+            hra_tax_savings = max_hra_exemption * 0.3  # Assuming 30% tax bracket
+            
+            # Calculate realistic Section 80C limit remaining
+            max_80c_investment = 150000
+            elss_tax_savings = max_80c_investment * 0.3
+            
+            # Show opportunities based on actual income level
             self.ui.console.print("┌─────────────────────────────────────────────────────────────┐")
-            self.ui.console.print("│ HRA Salary Restructuring (Metro)                          │")
-            self.ui.console.print(f"│    Potential HRA exemption: [cyan]₹{300000:>12,.0f}[/cyan]        │")
-            self.ui.console.print(f"│    Potential tax savings:   [green]₹{90000:>12,.0f}[/green]        │")
+            self.ui.console.print("│ HRA Salary Restructuring                                  │")
+            self.ui.console.print(f"│    Max HRA exemption:       [cyan]₹{max_hra_exemption:>12,.0f}[/cyan]        │")
+            self.ui.console.print(f"│    Estimated tax savings:   [green]₹{hra_tax_savings:>12,.0f}[/green]        │")
             self.ui.console.print("├─────────────────────────────────────────────────────────────┤")
-            self.ui.console.print("│ ELSS Mutual Funds (80C)                                   │")
-            self.ui.console.print(f"│    Maximum investment:      [cyan]₹{150000:>12,.0f}[/cyan]        │")
-            self.ui.console.print(f"│    Potential tax savings:   [green]₹{45000:>12,.0f}[/green]        │")
+            self.ui.console.print("│ Section 80C Investments                                   │")
+            self.ui.console.print(f"│    Maximum investment:      [cyan]₹{max_80c_investment:>12,.0f}[/cyan]        │")
+            self.ui.console.print(f"│    Estimated tax savings:   [green]₹{elss_tax_savings:>12,.0f}[/green]        │")
             self.ui.console.print("├─────────────────────────────────────────────────────────────┤")
             self.ui.console.print("│ NPS Additional (80CCD1B)                                   │")
             self.ui.console.print(f"│    Additional investment:   [cyan]₹{50000:>12,.0f}[/cyan]        │")
-            self.ui.console.print(f"│    Potential tax savings:   [green]₹{15000:>12,.0f}[/green]        │")
+            self.ui.console.print(f"│    Estimated tax savings:   [green]₹{15000:>12,.0f}[/green]        │")
             self.ui.console.print("├─────────────────────────────────────────────────────────────┤")
             self.ui.console.print("│ Health Insurance (80D)                                     │")
             self.ui.console.print(f"│    Premium for family:      [cyan]₹{50000:>12,.0f}[/cyan]        │")
-            self.ui.console.print(f"│    Potential tax savings:   [green]₹{15000:>12,.0f}[/green]        │")
+            self.ui.console.print(f"│    Estimated tax savings:   [green]₹{15000:>12,.0f}[/green]        │")
             self.ui.console.print("├─────────────────────────────────────────────────────────────┤")
-            self.ui.console.print(f"│ Total OLD Regime Benefits:   [cyan]₹{165000:>12,.0f}[/cyan]        │")
-            self.ui.console.print("│ Note: These benefits are NOT available in NEW regime    │")
+            total_estimated_savings = hra_tax_savings + elss_tax_savings + 15000 + 15000
+            self.ui.console.print(f"│ Total Estimated Benefits:    [cyan]₹{total_estimated_savings:>12,.0f}[/cyan]        │")
+            self.ui.console.print("│ Note: Benefits available only in OLD tax regime         │")
             self.ui.console.print("└─────────────────────────────────────────────────────────────┘")
     
     def _display_final_summary(self, analysis_result: Dict[str, Any]) -> None:

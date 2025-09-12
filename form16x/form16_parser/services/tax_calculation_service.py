@@ -82,27 +82,57 @@ class TaxCalculationService:
             # Create comprehensive input
             tax_input = ComprehensiveTaxCalculationInput(
                 gross_salary=gross_salary,
+                assessment_year=assessment_year,
+                regime_type=tax_regime if tax_regime != TaxRegimeType.BOTH else TaxRegimeType.OLD,
                 basic_salary=basic_salary,
                 hra_received=hra_received,
-                hra_rent_paid=Decimal('0'),  # Not available in Form16
+                rent_paid=Decimal('0'),  # Not available in Form16
+                city_type=city_type,
                 other_income=other_income,
-                bank_interest=bank_interest,
-                section_80c_investments=Decimal(str(extraction_data['section_80c'])),
-                section_80ccd_1b_nps=Decimal(str(extraction_data['section_80ccd_1b'])),
-                health_insurance_premium=Decimal('0'),  # Not available in Form16
-                assessment_year=assessment_year,
-                age_category=age_category,
-                city_type=city_type
+                bank_interest_income=bank_interest,
+                section_80c=Decimal(str(extraction_data['section_80c'])),
+                section_80ccd_1b=Decimal(str(extraction_data['section_80ccd_1b'])),
+                age_category=age_category
             )
             
             # Calculate tax for specified regime(s)
             if tax_regime == TaxRegimeType.BOTH:
-                old_result = calculator.calculate_tax(tax_input, TaxRegimeType.OLD)
-                new_result = calculator.calculate_tax(tax_input, TaxRegimeType.NEW)
+                # Calculate for old regime
+                old_input = ComprehensiveTaxCalculationInput(
+                    gross_salary=gross_salary,
+                    assessment_year=assessment_year,
+                    regime_type=TaxRegimeType.OLD,
+                    basic_salary=basic_salary,
+                    hra_received=hra_received,
+                    rent_paid=Decimal('0'),
+                    city_type=city_type,
+                    other_income=other_income,
+                    bank_interest_income=bank_interest,
+                    section_80c=Decimal(str(extraction_data['section_80c'])),
+                    section_80ccd_1b=Decimal(str(extraction_data['section_80ccd_1b'])),
+                    age_category=age_category
+                )
+                # Calculate for new regime
+                new_input = ComprehensiveTaxCalculationInput(
+                    gross_salary=gross_salary,
+                    assessment_year=assessment_year,
+                    regime_type=TaxRegimeType.NEW,
+                    basic_salary=basic_salary,
+                    hra_received=hra_received,
+                    rent_paid=Decimal('0'),
+                    city_type=city_type,
+                    other_income=other_income,
+                    bank_interest_income=bank_interest,
+                    section_80c=Decimal(str(extraction_data['section_80c'])),
+                    section_80ccd_1b=Decimal(str(extraction_data['section_80ccd_1b'])),
+                    age_category=age_category
+                )
+                old_result = calculator.calculate_tax(old_input)
+                new_result = calculator.calculate_tax(new_input)
                 results = {'old': old_result, 'new': new_result}
                 comparison = calculator.compare_regimes(old_result, new_result)
             else:
-                result = calculator.calculate_tax(tax_input, tax_regime)
+                result = calculator.calculate_tax(tax_input)
                 results = {tax_regime.value: result}
                 comparison = {}
             
@@ -113,8 +143,47 @@ class TaxCalculationService:
             
         except Exception as e:
             if tax_args.get('verbose', False):
-                print(f"Tax calculation error: {str(e)}")
-            return None
+                print(f"Comprehensive tax calculation error: {str(e)}")
+                print("Using simplified tax calculation...")
+            
+            # Fallback to simple tax calculation (not demo mode)
+            return self._calculate_simple_tax(extraction_data, tax_args)
+    
+    def _calculate_simple_tax(self, extraction_data: Dict[str, Any], tax_args: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculate tax using simple hardcoded rules (fallback when comprehensive calculator fails).
+        
+        Args:
+            extraction_data: Financial data extracted from Form16
+            tax_args: Tax calculation arguments
+            
+        Returns:
+            Dictionary containing tax calculation results (without demo_mode flag)
+        """
+        from ..tax_calculators.simple_tax_calculator import SimpleTaxCalculator
+        from decimal import Decimal
+        
+        calculator = SimpleTaxCalculator()
+        
+        # Extract data from Form16
+        gross_salary = Decimal(str(extraction_data.get('gross_salary', 0)))
+        section_80c = Decimal(str(extraction_data.get('section_80c', 0)))
+        section_80ccd_1b = Decimal(str(extraction_data.get('section_80ccd_1b', 0)))
+        tds_paid = Decimal(str(extraction_data.get('total_tds', 0)))
+        
+        # Calculate tax
+        results = calculator.calculate_tax_both_regimes(
+            gross_salary=gross_salary,
+            section_80c=section_80c,
+            section_80ccd_1b=section_80ccd_1b,
+            tds_paid=tds_paid,
+            assessment_year=tax_args.get('assessment_year', '2024-25')
+        )
+        
+        # Add extraction data for display
+        results['extraction_data'] = extraction_data
+        
+        return results
     
     def get_demo_tax_results(self, tax_args: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -149,6 +218,79 @@ class TaxCalculationService:
                 'recommended_regime': 'new'
             },
             'recommendation': 'NEW regime saves ₹25,000 annually',
+            'demo_mode': True
+        }
+    
+    def _generate_demo_tax_results_from_extraction(self, extraction_data: Dict[str, Any], tax_args: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate demo tax results based on actual extracted Form16 data.
+        
+        Args:
+            extraction_data: Financial data extracted from Form16
+            tax_args: Tax calculation arguments
+            
+        Returns:
+            Dictionary containing realistic demo tax results
+        """
+        gross_salary = extraction_data.get('gross_salary', 800000)
+        section_80c = extraction_data.get('section_80c', 15000)
+        
+        # Calculate realistic tax amounts based on actual salary
+        taxable_income_old = gross_salary - 50000 - section_80c  # Standard deduction + 80C
+        taxable_income_new = gross_salary - 50000  # Only standard deduction in new regime
+        
+        # Approximate tax calculation for demo
+        # Old regime: Higher deductions but higher rates
+        if taxable_income_old <= 250000:
+            tax_old = 0
+        elif taxable_income_old <= 500000:
+            tax_old = (taxable_income_old - 250000) * 0.05
+        elif taxable_income_old <= 1000000:
+            tax_old = 12500 + (taxable_income_old - 500000) * 0.20
+        else:
+            tax_old = 112500 + (taxable_income_old - 1000000) * 0.30
+            
+        # New regime: Lower deductions but lower rates
+        if taxable_income_new <= 300000:
+            tax_new = 0
+        elif taxable_income_new <= 600000:
+            tax_new = (taxable_income_new - 300000) * 0.05
+        elif taxable_income_new <= 900000:
+            tax_new = 15000 + (taxable_income_new - 600000) * 0.10
+        elif taxable_income_new <= 1200000:
+            tax_new = 45000 + (taxable_income_new - 900000) * 0.15
+        else:
+            tax_new = 90000 + (taxable_income_new - 1200000) * 0.20
+            
+        # Add cess and round to nearest rupee
+        tax_old = int(tax_old * 1.04)  # 4% cess
+        tax_new = int(tax_new * 1.04)  # 4% cess
+        
+        return {
+            'results': {
+                'old': {
+                    'gross_salary': gross_salary,
+                    'taxable_income': taxable_income_old,
+                    'tax_liability': tax_old,
+                    'tds_paid': extraction_data.get('total_tds', 65000),
+                    'balance': extraction_data.get('total_tds', 65000) - tax_old,
+                    'effective_tax_rate': (tax_old / gross_salary * 100) if gross_salary > 0 else 0
+                },
+                'new': {
+                    'gross_salary': gross_salary,
+                    'taxable_income': taxable_income_new,
+                    'tax_liability': tax_new,
+                    'tds_paid': extraction_data.get('total_tds', 65000),
+                    'balance': extraction_data.get('total_tds', 65000) - tax_new,
+                    'effective_tax_rate': (tax_new / gross_salary * 100) if gross_salary > 0 else 0
+                }
+            },
+            'comparison': {
+                'savings_with_new': max(0, tax_old - tax_new),
+                'recommended_regime': 'new' if tax_new < tax_old else 'old'
+            },
+            'extraction_data': extraction_data,
+            'recommendation': f"{'NEW' if tax_new < tax_old else 'OLD'} regime saves ₹{abs(tax_old - tax_new):,.0f} annually",
             'demo_mode': True
         }
     

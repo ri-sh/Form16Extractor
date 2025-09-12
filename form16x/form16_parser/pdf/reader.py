@@ -14,30 +14,37 @@ import pandas as pd
 from dataclasses import dataclass
 from enum import Enum
 
-# PDF processing libraries
-try:
-    import camelot
-    CAMELOT_AVAILABLE = True
-except ImportError:
-    CAMELOT_AVAILABLE = False
+# PDF processing libraries - LAZY LOADED for performance
+import sys
+from typing import TYPE_CHECKING
 
-try:
-    import tabula
-    TABULA_AVAILABLE = True
-except ImportError:
-    TABULA_AVAILABLE = False
+def _check_module_availability(module_name: str) -> bool:
+    """Check if a module is available without importing it"""
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec(module_name)
+        return spec is not None
+    except ImportError:
+        return False
 
-try:
-    import pdfplumber
-    PDFPLUMBER_AVAILABLE = True
-except ImportError:
-    PDFPLUMBER_AVAILABLE = False
+def _lazy_import(module_name: str):
+    """Lazy import with caching"""
+    if module_name not in _module_cache:
+        try:
+            _module_cache[module_name] = __import__(module_name)
+        except ImportError as e:
+            _module_cache[module_name] = None
+            raise ImportError(f"{module_name} not available: {e}")
+    return _module_cache[module_name]
 
-try:
-    import PyPDF2
-    PYPDF2_AVAILABLE = True
-except ImportError:
-    PYPDF2_AVAILABLE = False
+# Module cache for lazy loading
+_module_cache = {}
+
+# Import availability flags - checked at runtime
+CAMELOT_AVAILABLE = 'camelot' in sys.modules or _check_module_availability('camelot')
+TABULA_AVAILABLE = 'tabula' in sys.modules or _check_module_availability('tabula')
+PDFPLUMBER_AVAILABLE = 'pdfplumber' in sys.modules or _check_module_availability('pdfplumber')
+PYPDF2_AVAILABLE = 'PyPDF2' in sys.modules or _check_module_availability('PyPDF2')
 
 
 class ExtractionStrategy(Enum):
@@ -120,15 +127,17 @@ class RobustPDFProcessor(IPDFProcessor):
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
         
-        self.logger.info(f"Extracting tables from: {pdf_path.name}")
+        # Conditional logging for performance (only if INFO level enabled)
+        if logging.getLogger().isEnabledFor(logging.INFO):
+            self.logger.info(f"Extracting tables from: {pdf_path.name}")
         
-        # Try strategies in order of preference
+        # Try strategies in order of preference (optimized for speed)
         preferred_order = [
-            ExtractionStrategy.CAMELOT_LATTICE,
-            ExtractionStrategy.CAMELOT_STREAM,
-            ExtractionStrategy.TABULA_LATTICE,
-            ExtractionStrategy.PDFPLUMBER,
-            ExtractionStrategy.TEXT_EXTRACTION,
+            ExtractionStrategy.CAMELOT_LATTICE,    # Fast and accurate for most Form16s
+            ExtractionStrategy.TEXT_EXTRACTION,    # Always run for hybrid approach
+            ExtractionStrategy.CAMELOT_STREAM,     # Secondary camelot strategy
+            ExtractionStrategy.PDFPLUMBER,         # Fast lightweight option
+            ExtractionStrategy.TABULA_LATTICE,     # Slower but comprehensive
             ExtractionStrategy.FALLBACK
         ]
         
@@ -141,19 +150,23 @@ class RobustPDFProcessor(IPDFProcessor):
                 continue
                 
             try:
-                self.logger.debug(f"Trying strategy: {strategy.value}")
+                # Conditional debug logging for performance
+                if logging.getLogger().isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Trying strategy: {strategy.value}")
                 result = self._extract_with_strategy(pdf_path, strategy)
                 
                 # Handle text extraction separately for hybrid approach
                 if strategy == ExtractionStrategy.TEXT_EXTRACTION:
                     if result and result.text_data:
-                        self.logger.info(f"Text extraction found {len(result.text_data)} identity fields")
+                        if logging.getLogger().isEnabledFor(logging.INFO):
+                            self.logger.info(f"Text extraction found {len(result.text_data)} identity fields")
                         text_extraction_result = result
                         all_warnings.extend(result.warnings)
                     continue
                 
                 if result and result.tables:
-                    self.logger.info(f"Success with {strategy.value}: {len(result.tables)} tables extracted")
+                    if logging.getLogger().isEnabledFor(logging.INFO):
+                        self.logger.info(f"Success with {strategy.value}: {len(result.tables)} tables extracted")
                     
                     # Calculate confidence score for this result
                     confidence = self._calculate_extraction_confidence(result.tables, strategy)
@@ -165,8 +178,14 @@ class RobustPDFProcessor(IPDFProcessor):
                     
                     all_warnings.extend(result.warnings)
                     
-                    # If we got high-confidence results, stop trying table extraction
-                    if confidence > 0.8:
+                    # Early termination for high-confidence results (PERFORMANCE OPTIMIZATION)
+                    if confidence > 0.8 and len(result.tables) >= 2:
+                        if logging.getLogger().isEnabledFor(logging.DEBUG):
+                            self.logger.debug(f"Early termination: high confidence {confidence:.2f} with {len(result.tables)} tables")
+                        break
+                    elif confidence > 0.9:  # Very high confidence, stop immediately
+                        if logging.getLogger().isEnabledFor(logging.DEBUG):
+                            self.logger.debug(f"Early termination: very high confidence {confidence:.2f}")
                         break
                         
             except Exception as e:
@@ -243,6 +262,9 @@ class RobustPDFProcessor(IPDFProcessor):
         if not CAMELOT_AVAILABLE:
             raise ImportError("Camelot not available")
         
+        # Lazy import camelot only when needed
+        camelot = _lazy_import('camelot')
+        
         # Camelot parameters optimized for Form 16
         camelot_kwargs = {
             'flavor': flavor,
@@ -315,6 +337,9 @@ class RobustPDFProcessor(IPDFProcessor):
         """Extract using Tabula (fallback strategy)"""
         if not TABULA_AVAILABLE:
             raise ImportError("Tabula not available")
+        
+        # Lazy import tabula only when needed
+        tabula = _lazy_import('tabula')
         
         tabula_kwargs = {
             'pages': 'all',
@@ -505,25 +530,41 @@ class RobustPDFProcessor(IPDFProcessor):
         )
     
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Clean and normalize extracted DataFrame"""
+        """Clean and normalize extracted DataFrame - OPTIMIZED"""
         if df.empty:
             return df
         
-        # Make a copy to avoid modifying original
+        # Optimize: Check if cleaning is needed first
+        if df.isna().all().all():  # All values are NaN
+            return pd.DataFrame()
+        
+        # Make a copy to avoid modifying original (only if needed)
         cleaned_df = df.copy()
         
-        # Remove completely empty rows and columns
-        cleaned_df = cleaned_df.dropna(how='all').dropna(axis=1, how='all')
+        # Vectorized operations for better performance
+        # Remove completely empty rows and columns in one operation
+        cleaned_df = cleaned_df.dropna(how='all', axis=0).dropna(how='all', axis=1)
         
-        # Clean string values
-        for col in cleaned_df.columns:
-            if cleaned_df[col].dtype == object:  # String column
-                cleaned_df[col] = cleaned_df[col].astype(str)
-                cleaned_df[col] = cleaned_df[col].str.strip()
-                cleaned_df[col] = cleaned_df[col].replace(['nan', 'None', '', 'NaN'], None)
+        if cleaned_df.empty:
+            return cleaned_df
         
-        # Reset index
-        cleaned_df = cleaned_df.reset_index(drop=True)
+        # Optimize string cleaning - vectorized operations
+        object_columns = cleaned_df.select_dtypes(include=['object']).columns
+        if len(object_columns) > 0:
+            # Batch convert and clean string columns
+            for col in object_columns:
+                series = cleaned_df[col]
+                # Only process if series has data
+                if not series.empty:
+                    series_str = series.astype(str, copy=False)
+                    series_clean = series_str.str.strip()
+                    # Use vectorized replace for common null values
+                    null_mask = series_clean.isin(['nan', 'None', '', 'NaN', 'null'])
+                    cleaned_df[col] = series_clean.where(~null_mask, None)
+        
+        # Reset index only if needed
+        if not cleaned_df.index.equals(pd.RangeIndex(len(cleaned_df))):
+            cleaned_df = cleaned_df.reset_index(drop=True)
         
         return cleaned_df
     

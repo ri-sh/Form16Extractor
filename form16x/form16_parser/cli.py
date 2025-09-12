@@ -17,6 +17,7 @@ from .commands.extract_command import ExtractCommand
 from .commands.consolidate_command import ConsolidateCommand
 from .commands.batch_command import BatchCommand
 from .display.rich_ui_components import RichUIComponents
+from .display.cli_ascii_art import CLIAsciiArt
 
 
 class CLIRouter:
@@ -25,6 +26,7 @@ class CLIRouter:
     def __init__(self):
         """Initialize the CLI router."""
         self.ui = RichUIComponents()
+        self.ascii_art = CLIAsciiArt()
         self.commands: Dict[str, Type[BaseCommand]] = {
             'optimize': OptimizeCommand,
             'extract': ExtractCommand,
@@ -295,6 +297,10 @@ class CLIRouter:
         )
     
     
+    def _display_startup_logo(self):
+        """Display the Form16X ASCII art logo."""
+        self.ascii_art.display_startup_logo(option=1, show_tagline=True)
+    
     def route_command(self, args) -> int:
         """
         Route the command to the appropriate command controller.
@@ -305,6 +311,9 @@ class CLIRouter:
         Returns:
             int: Exit code from the command
         """
+        # Display Form16X ASCII art logo at the start of each command
+        self._display_startup_logo()
+        
         if not args.command:
             self.ui.console.print("[bold red]Error:[/bold red] No command specified")
             self.ui.console.print("Use --help to see available commands")

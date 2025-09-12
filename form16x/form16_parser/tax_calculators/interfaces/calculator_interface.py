@@ -13,6 +13,7 @@ class TaxRegimeType(Enum):
     """Tax regime types."""
     OLD = "old"
     NEW = "new"
+    BOTH = "both"
 
 
 class AgeCategory(Enum):

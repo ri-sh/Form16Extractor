@@ -69,8 +69,11 @@ class ExtractCommand(BaseCommand):
             self._save_extraction_results(extraction_result, output_file, args)
             
             # Display tax results if calculated
-            if 'tax_calculation' in extraction_result and extraction_result['tax_calculation']:
-                self._display_tax_results(extraction_result['tax_calculation'], args, extraction_result.get('form16_data'))
+            form16_data = extraction_result.get('form16_data', {})
+            if 'tax_calculation' in form16_data and form16_data['tax_calculation']:
+                print("\nTAX CALCULATION RESULTS")
+                print("=" * 50)
+                self._display_tax_results(form16_data['tax_calculation'], args, form16_data)
             
             # Display completion message
             self._display_completion_message(input_file, output_file, extraction_result)
@@ -339,9 +342,9 @@ class ExtractCommand(BaseCommand):
         print(f"\nExtraction completed successfully!")
         print(f"Input: {input_file}")
         
-        # Only show output file if it was actually saved
-        if output_file:
-            print(f"Note: Use --output to save results to file, or --calculate-tax for tax computation")
+        # Show output file if it exists
+        if output_file and output_file.exists():
+            print(f"Output: {output_file}")
         
         print(f"Processing time: {processing_time:.2f} seconds")
         

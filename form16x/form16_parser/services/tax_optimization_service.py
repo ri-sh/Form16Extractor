@@ -91,29 +91,30 @@ class TaxOptimizationService:
         # Create demo optimization analysis
         optimization_analysis = self.optimizer.create_dummy_optimization_analysis(complexity_level)
         
-        # Create demo tax results
+        # Create demo tax results based on ₹25L salary (realistic calculation)
+        demo_taxable_income = 2125000  # ₹25L gross - standard deduction - exemptions  
         demo_tax_results = {
             'results': {
                 'old': {
-                    'tax_liability': 103723,
-                    'taxable_income': 862724,
-                    'tds_paid': 85000,
-                    'balance': -18723,
-                    'effective_tax_rate': 12.02
+                    'tax_liability': 468000,  # OLD regime tax on ₹21.25L
+                    'taxable_income': demo_taxable_income,
+                    'tds_paid': 450000,
+                    'balance': -18000,
+                    'effective_tax_rate': 22.0
                 },
                 'new': {
-                    'tax_liability': 78723,
-                    'taxable_income': 862724,
-                    'tds_paid': 85000,
-                    'balance': 6277,
-                    'effective_tax_rate': 9.13
+                    'tax_liability': 331250,  # NEW regime tax on ₹21.25L  
+                    'taxable_income': demo_taxable_income,
+                    'tds_paid': 350000,
+                    'balance': 18750,
+                    'effective_tax_rate': 15.6
                 }
             },
             'comparison': {
-                'savings_with_new': 25000,
+                'savings_with_new': 136750,  # NEW saves ₹1.37L vs OLD
                 'recommended_regime': 'new'
             },
-            'recommendation': 'NEW regime saves ₹25,000 annually'
+            'recommendation': 'NEW regime saves ₹1,36,750 annually'
         }
         
         # Convert optimization_analysis to dict if it's an object
@@ -129,10 +130,10 @@ class TaxOptimizationService:
             'tax_calculations': demo_tax_results,
             'optimization_analysis': optimization_dict,
             'demo_mode': True,
-            'current_tax_liability': 78723,
+            'current_tax_liability': 331250,  # NEW regime tax
             'recommended_regime': 'new',
-            'tax_savings': 25000,
-            'current_taxable_income': 862724
+            'tax_savings': 136750,  # Savings vs OLD regime
+            'current_taxable_income': demo_taxable_income
         }
     
     def _calculate_tax_for_regimes(self, form16_result: Any) -> Dict[str, Any]:
